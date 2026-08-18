@@ -9,6 +9,14 @@ would block adding a second type later.
 Decisions below were confirmed with the project owner on 2026-08-17. Anything marked
 **(ASSUMPTION)** was inferred to keep the spec unblocked and should be corrected if wrong.
 
+**This document is the product spec — what each screen/endpoint should do and why.**
+For an implementation-level map of the actual code (file-by-file purpose, data flow,
+gotchas — written so an AI session can read it instead of re-reading the whole
+codebase), see `frontend/frontend_reference.md` and `backend/backend_reference.md` in
+this same folder.
+Keep those two updated whenever the corresponding code structure changes; keep this
+doc updated whenever the intended behavior changes.
+
 ---
 
 ## 1. Tech Stack
