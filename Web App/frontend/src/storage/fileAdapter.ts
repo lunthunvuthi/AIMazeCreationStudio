@@ -11,7 +11,8 @@ const LEVEL_NAMES: LevelName[] = ['kinder', 'primary', 'advanced']
 
 export function downloadLevelProgress(progress: LevelProgress): void {
   const stamp = progress.updatedAt.replace(/[:.]/g, '-')
-  const filename = `${progress.mazeType}-${progress.level}-${stamp}.json`
+  const monthStr = String(progress.month).padStart(2, '0')
+  const filename = `${progress.mazeType}-${progress.level}-${progress.year}-${monthStr}-week${progress.week}-${stamp}.json`
 
   const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
@@ -48,5 +49,13 @@ export async function parseLevelProgressFile(file: File): Promise<LevelProgress>
     throw new Error('That file is not a valid level progress file.')
   }
 
-  return data as unknown as LevelProgress
+  // Sheet metadata was added after this format was first used — default it in
+  // for save files exported before that, rather than rejecting them.
+  const now = new Date()
+  const sheetName = typeof data.sheetName === 'string' ? data.sheetName : ''
+  const year = typeof data.year === 'number' ? data.year : now.getFullYear()
+  const month = typeof data.month === 'number' && data.month >= 1 && data.month <= 12 ? data.month : now.getMonth() + 1
+  const week = typeof data.week === 'number' ? data.week : 1
+
+  return { ...data, sheetName, year, month, week } as unknown as LevelProgress
 }

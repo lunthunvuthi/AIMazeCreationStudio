@@ -2,7 +2,12 @@
 
 When generating a full set (or book) of Pickaxe Mazes, we organize them into three distinct difficulty levels: **Kinder**, **Primary**, and **Advanced**. 
 
-Each level follows a strict distribution of difficulty ratings (measured in "Stars"), ensuring a smooth difficulty curve that always begins with a 1-star tutorial.
+Each level follows a distribution of difficulty ratings (measured in "Stars"), ensuring a smooth difficulty curve that always begins with a 1-star tutorial.
+
+*(Note: the counts below are the **starting template** a new sheet is built from, not a
+hard cap. From the Level Dashboard in the web app, any individual question sheet can add
+extra questions at any star rating, remove questions, or re-rate an existing question —
+per level totals below are the default, not enforced afterward.)*
 
 ## 1. Kinder Level
 Designed for beginner players. It focuses on introducing the mechanics.

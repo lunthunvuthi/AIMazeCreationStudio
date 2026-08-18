@@ -4,6 +4,21 @@
 
 export type LevelName = 'kinder' | 'primary' | 'advanced'
 
+export const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const
+
 export type QuestionStatus = 'empty' | 'in_progress' | 'randomized' | 'complete'
 
 export type QuestionOrigin = 'manual' | 'random' | null
@@ -37,6 +52,10 @@ export interface LevelProgress {
   formatVersion: 1
   mazeType: string // registry key, see §5
   level: LevelName
+  sheetName: string // user-editable label, e.g. "Kinder Week 2"
+  year: number
+  month: number // 1-12, see MONTH_NAMES
+  week: number
   questions: MazeQuestion[]
   createdAt: string
   updatedAt: string

@@ -20,26 +20,51 @@ const STATUS_CLASSES: Record<MazeQuestion['status'], string> = {
 export default function QuestionSlotCard({
   mazeTypeId,
   question,
+  starOptions,
+  onChangeStar,
+  onRemove,
 }: {
   mazeTypeId: string
   question: MazeQuestion
+  starOptions: number[]
+  onChangeStar: (star: number) => void
+  onRemove: () => void
 }) {
   return (
-    <Link
-      to={`/${mazeTypeId}/dashboard/${question.question_id}`}
-      className="flex flex-col items-start gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
-    >
-      {question.maze && (
-        <div className="mx-auto w-24">
-          <PickaxeGrid grid={hydrateDraftFromMazeData(question.maze, null).grid} mode="view" />
-        </div>
-      )}
-      <span className="text-sm font-medium text-slate-900">
-        {'★'.repeat(question.difficulty_star)} ({question.difficulty_star})
-      </span>
-      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[question.status]}`}>
-        {STATUS_LABEL[question.status]}
-      </span>
-    </Link>
+    <div className="flex flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+      <Link to={`/${mazeTypeId}/dashboard/${question.question_id}`} className="flex flex-col items-center gap-2">
+        {question.maze && (
+          <div className="mx-auto w-24">
+            <PickaxeGrid grid={hydrateDraftFromMazeData(question.maze, null).grid} mode="view" />
+          </div>
+        )}
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[question.status]}`}>
+          {STATUS_LABEL[question.status]}
+        </span>
+      </Link>
+
+      <label className="flex items-center justify-between gap-2 text-xs text-slate-500">
+        <span>Difficulty</span>
+        <select
+          value={question.difficulty_star}
+          onChange={(e) => onChangeStar(Number(e.target.value))}
+          className="rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-900 focus:border-indigo-300 focus:outline-none"
+        >
+          {starOptions.map((s) => (
+            <option key={s} value={s}>
+              {'★'.repeat(s)} ({s})
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="self-end text-xs font-medium text-slate-400 hover:text-red-500"
+      >
+        Remove
+      </button>
+    </div>
   )
 }

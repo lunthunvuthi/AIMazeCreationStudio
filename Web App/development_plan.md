@@ -109,11 +109,21 @@ type LevelProgress = {
   formatVersion: 1;
   mazeType: "pickaxe";         // registry key, see §5
   level: "kinder" | "primary" | "advanced";
+  sheetName: string;           // user-editable label, e.g. "Kinder Week 2"
+  year: number;
+  month: number;                // 1-12
+  week: number;
   questions: MazeQuestion[];   // pre-populated per difficulty_setting.md distribution
   createdAt: string;           // ISO timestamp, stamped client-side at export time
   updatedAt: string;
 };
 ```
+
+`sheetName`/`year`/`month`/`week` default to blank/current-year/current-month/1 when a
+level is started, and are editable at any time from the Level Dashboard (§6.5) — they
+identify which real-world question sheet (e.g. "2026, August, Week 2") this `LevelProgress`
+corresponds to. Save files exported before these fields existed load fine; missing values
+are defaulted the same way.
 
 The **JSON export/import format IS `LevelProgress`** — no separate "save file" schema.
 Downloading mid-progress and downloading a fully-complete level use the same shape; only
@@ -163,8 +173,10 @@ should not require touching the landing page, routing, or save/load logic.
 
 ### 6.4 Create New Maze → Level Selection
 - User picks Kinder / Primary / Advanced.
-- App immediately builds the `questions[]` list per the exact star distribution in
+- App immediately builds the `questions[]` list per the star distribution in
   `difficulty_setting.md` (e.g. Kinder = 1★×1, 2★×2, 3★×2, 4★×2, 5★×1), all `status: "empty"`.
+  This distribution is a **starting template, not a hard cap** — see §6.5 for how the
+  dashboard lets a sheet diverge from it afterward.
 - The 1★ tutorial slot is **auto-generated immediately** (calls
   `/api/maze/generate` with `star: 1`, no user interaction) and marked `randomized` /
   `complete` before the dashboard is even shown.
@@ -177,6 +189,16 @@ should not require touching the landing page, routing, or save/load logic.
   Selecting an already-`complete` slot reopens it (at Step 4 for randomized-origin, or
   the wizard for manual-origin) so it can be modified and re-validated.
 - Header shows overall completion (e.g. "3 / 8 complete").
+- Each slot has its own **difficulty selector** (any star the maze type registers, e.g.
+  1-8 for PickAxe) so a question can be re-rated after the level was created, and its own
+  **Remove** control. Re-rating or removing a slot that already holds a maze prompts for
+  confirmation first, since the maze is tied to that star's `starParams` (grid size,
+  pickaxe range) and can't just carry over — the slot resets to `empty` under its new
+  star, matching the manual wizard's "any edit invalidates" rule.
+- A trailing **"+ Add question"** slot in the grid lets the user grow the sheet past
+  `difficulty_setting.md`'s starting count: picking a star appends a new `empty` slot.
+  This is how a sheet ends up with more (or fewer, via Remove) questions than the level's
+  default distribution — e.g. adding an extra 3★ question to a Kinder sheet.
 - Always-available **Save Progress** button → exports current `LevelProgress` as JSON
   (works at any completion level, including 0%).
 - When **all** slots are `complete`: **Export JSON** becomes available (same action as
