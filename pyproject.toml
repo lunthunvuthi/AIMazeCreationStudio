@@ -1,0 +1,23 @@
+[project]
+name = "maze-studio"
+version = "0.1.0"
+description = "Maze/quiz generation and validation, starting with the PickAxe Maze type"
+requires-python = ">=3.9"
+dependencies = ["fastapi", "uvicorn", "pydantic"]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[project.scripts]
+pickaxe-maze = "pickaxe_maze.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "pickaxe-maze-creation", "maze_api" = "Web App/backend/maze_api" }
+packages = ["pickaxe_maze", "maze_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["pickaxe-maze-creation/tests", "Web App/backend/tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

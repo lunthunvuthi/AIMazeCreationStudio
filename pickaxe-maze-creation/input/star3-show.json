@@ -1,0 +1,19 @@
+{
+  "question_id": "star3-show",
+  "difficulty_star": 3,
+  "pickaxe_count": 1,
+  "width": 4,
+  "height": 4,
+  "maze": [
+    "s|,_,_|,g",
+    " |,.,|,_",
+    ".,.,_|,.",
+    ".,|,.,."
+  ],
+  "solutionTrace": "S,1 -> 5 -> 9 -> 10 -> 11 -> 7 -> 8 (break | wall) ->4",
+  "seeds": {
+    "sgSeed": 214538573,
+    "pathSeed": 3534984488,
+    "wallSeed": 1721321813
+  }
+}
