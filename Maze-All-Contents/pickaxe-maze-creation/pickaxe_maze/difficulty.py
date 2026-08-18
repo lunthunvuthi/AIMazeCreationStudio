@@ -1,5 +1,5 @@
 """Star parameters and level distributions, ported verbatim from
-../difficulty_setting.md.
+../docs/difficulty_setting.md.
 """
 
 from dataclasses import dataclass

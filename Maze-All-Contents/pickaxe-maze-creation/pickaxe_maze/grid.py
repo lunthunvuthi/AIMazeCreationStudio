@@ -1,6 +1,6 @@
 """Internal grid representation shared by the validator and generator.
 
-Implements the parsing/serialization rules from ../rules.md §7: each row is a
+Implements the parsing/serialization rules from ../docs/rules.md §7: each row is a
 comma-separated string of cells. A cell token is an optional kind prefix
 ("s"/"g", absent for a normal cell) plus a wall suffix ("", "|", "_", "_|") —
 "." is the explicit normal-cell "no wall" spelling. A right wall ("|") is

@@ -7,7 +7,7 @@ __pycache__/
 node_modules/
 dist/
 
-pickaxe-maze-creation/input/*
-pickaxe-maze-creation/output/*
-!pickaxe-maze-creation/input/.gitkeep
-!pickaxe-maze-creation/output/.gitkeep
+Maze-All-Contents/pickaxe-maze-creation/input/*
+Maze-All-Contents/pickaxe-maze-creation/output/*
+!Maze-All-Contents/pickaxe-maze-creation/input/.gitkeep
+!Maze-All-Contents/pickaxe-maze-creation/output/.gitkeep

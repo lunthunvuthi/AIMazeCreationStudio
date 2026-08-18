@@ -1,6 +1,6 @@
 """Importable Python modules implementing the PickAxe Maze generator and validator.
 
-See ../generation_spec.md and ../validator_design.md for the specs these port.
+See ../docs/generation_spec.md and ../docs/validator_design.md for the specs these port.
 """
 
 from .models import MazeData

@@ -45,7 +45,7 @@ pip install -e ".[dev]"
 ```
 
 This installs the `pickaxe_maze` package (the generator/validator in
-[`pickaxe-maze-creation/pickaxe_maze/`](pickaxe-maze-creation/pickaxe_maze/)) and the
+[`Maze-All-Contents/pickaxe-maze-creation/pickaxe_maze/`](Maze-All-Contents/pickaxe-maze-creation/pickaxe_maze/)) and the
 `maze_api` FastAPI app (in [`Web App/backend/maze_api/`](Web%20App/backend/maze_api/)) so
 both are importable from anywhere in the project, plus `pytest`/`httpx` for running their
 tests:
@@ -60,7 +60,7 @@ pytest
 uvicorn maze_api.main:app --reload --app-dir "Web App/backend" --port 8000
 ```
 
-Serves the two endpoints from [`Web App/development_plan.md`](Web%20App/development_plan.md)
+Serves the two endpoints from [`Web App/docs/development_plan.md`](Web%20App/docs/development_plan.md)
 §8:
 
 - `POST /api/maze/generate` — `{ type, star, sgSeed?, pathSeed?, wallSeed? }` → a generated
@@ -73,7 +73,7 @@ registered so far, per the maze-type registry in §5.
 ### Command-line usage
 
 The editable install also registers a `pickaxe-maze` command with three subcommands, all
-reading/writing under [`pickaxe-maze-creation/`](pickaxe-maze-creation/)'s `input/` and
+reading/writing under [`Maze-All-Contents/pickaxe-maze-creation/`](Maze-All-Contents/pickaxe-maze-creation/)'s `input/` and
 `output/` folders by default:
 
 ```bash
@@ -81,12 +81,12 @@ reading/writing under [`pickaxe-maze-creation/`](pickaxe-maze-creation/)'s `inpu
 pickaxe-maze generate --star 3
 
 # Generate a full level's worth of questions (kinder/primary/advanced) as a
-# single LevelProgress JSON (Web App/development_plan.md §4.3) in output/
+# single LevelProgress JSON (Web App/docs/development_plan.md §4.3) in output/
 pickaxe-maze generate-level --level kinder
 
 # Validate a MazeData or LevelProgress JSON — typically one dropped into
 # input/ — and write a Markdown report next to it, as <name>_report.md
-pickaxe-maze validate "pickaxe-maze-creation/input/star3.json"
+pickaxe-maze validate "Maze-All-Contents/pickaxe-maze-creation/input/star3.json"
 ```
 
 Run `pickaxe-maze <subcommand> --help` for the full set of options (custom seeds,

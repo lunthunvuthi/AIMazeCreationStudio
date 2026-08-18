@@ -1,4 +1,4 @@
-"""Constructive generator, ported from ../generation_spec.md.
+"""Constructive generator, ported from ../docs/generation_spec.md.
 
 Steps 1-2 (init + S/G placement) are seeded by sg_seed; step 3 (ideal path) by
 path_seed; steps 4-5 (required + distraction walls) by wall_seed. Step 6-7

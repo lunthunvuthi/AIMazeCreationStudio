@@ -1,7 +1,7 @@
 # Maze Studio Web App — Development Plan
 
 This document specifies the web application that wraps the maze generation/validation
-scripts (see `pickaxe-maze-creation/`) in an interactive authoring tool. It is written to
+scripts (see `Maze-All-Contents/pickaxe-maze-creation/`) in an interactive authoring tool. It is written to
 be **maze-type-agnostic** at the architecture level — PickAxe Maze is the first (and
 currently only) registered maze type, but the app should not hardcode assumptions that
 would block adding a second type later.
@@ -20,7 +20,7 @@ Decisions below were confirmed with the project owner on 2026-08-17. Anything ma
 | Frontend state | Zustand (or React Context if the store stays small) | one store per in-progress level session |
 | Backend | Python + FastAPI | hosts the generator + validator algorithms from `generation_spec.md` / `validator_design.md` natively, no translation to JS |
 | Backend algorithm code | Reuses/implements the DFS validator and constructive generator exactly as specified in the PickAxe docs | this is also the "Maze Generator and Validator scripts" the previous handoff flagged as the next step — building them as importable Python modules serves both the CLI/offline use case and this API |
-| PDF export | **Deferred** — button stays disabled/hidden until a designer delivers the print template | see [§7](#7-maze-visual-rendering-spec) for the simple in-app visual that ships now instead |
+| PDF export | **Deferred** — button stays disabled/hidden until a designer delivers the print template | see [§7](#7-maze-visual-rendering-spec) for the simple in-app visual that ships now instead; the designer's sample has since arrived and is specced in `pdf_export_spec.md` (renderer not yet built) |
 | Persistence | **Phase 1: file-based only** (JSON export/import, no DB) | see [§2](#2-persistence-strategy-phased) |
 | Deployment | Not yet decided — out of scope for this doc | revisit once Phase 1-3 are working locally |
 
@@ -182,6 +182,14 @@ should not require touching the landing page, routing, or save/load logic.
   `complete` before the dashboard is even shown.
 
 ### 6.5 Level Dashboard
+
+**Superseded by `level_dashboard_pagination_spec.md` (2026-08-19):** the flat
+question-grid layout described below is being replaced by a page-row list (1-2
+questions per row, drag-and-drop reorder/swap, a locked cover row, and new
+Preview/Download actions) so the dashboard directly authors the PDF page structure from
+`pdf_export_spec.md`. That doc is spec-only so far (no code changes yet) — the
+description below still reflects what's actually built today.
+
 - Shows all slots (e.g. as a star-labeled grid/list) with status badges: Empty /
   In Progress / Complete, each rendered with the simple visual style from
   [§7](#7-maze-visual-rendering-spec) once a maze exists for that slot.
@@ -299,12 +307,19 @@ defines a range (stars 6-8), otherwise it's also fixed and shown read-only.
 
 ## 7. Maze Visual Rendering Spec
 
-No print-ready design exists yet (a designer is producing that separately). Until then,
-the app ships with a **simple in-app visual renderer** — this is the shared
+The app ships with a **simple in-app visual renderer** — this is the shared
 `CellRenderer` referenced in the registry (§5), used everywhere a maze needs to be shown:
 the wizard steps, the read-only Randomize/Step-4 view, and the Level Dashboard's slot
 previews. It is *not* the print template — **Export PDF stays disabled** (§6.5) until
-that real template replaces this spec.
+a renderer implementing the real template ships.
+
+A designer sample has since arrived (`Maze-All-Contents/pickaxe-maze-creation/Images/
+Sample/Kinder July-week4-01.pdf` + its answer-key counterpart) and is specced in
+`pdf_export_spec.md`
+— page geometry, pagination, per-panel layout, and open decisions (icon set, branding
+placeholder, answer-key delivery, renderer tech). That spec is written; the renderer
+itself is not yet built, so this section's in-app visual remains what actually ships
+today.
 
 Recommended implementation: one SVG per maze (or a `<div>` grid with absolutely-positioned
 overlays) so the percentage-based wall rectangles are trivial to place.
@@ -361,8 +376,14 @@ in §5).
    delivers the real print template.
 6. *(Future)* `localStorage` autosave layer (Phase 2 persistence, §2).
 7. *(Future)* Backend-persisted accounts/projects (Phase 3 persistence, §2).
-8. *(Future, blocked on designer)* Wire up real PDF export once a print template exists,
-   replacing the disabled button from step 5.
+8. *(Future)* Wire up real PDF export per `pdf_export_spec.md` (the print template has
+   arrived and is specced; the renderer is not yet built), replacing the disabled button
+   from step 5. Open decisions in that doc's §7 need resolving first (icon set,
+   answer-key delivery, backend-vs-frontend rendering).
+9. *(Future)* Level Dashboard page-row redesign per `level_dashboard_pagination_spec.md`
+   — `pages[]` data model + migration, drag-and-drop, Preview/Download actions. Its
+   Preview button's Phase A (in-app layout preview) doesn't need step 8's renderer;
+   Phase B (real PDF preview) and Download's PDF half do.
 
 ---
 
@@ -376,5 +397,7 @@ All four items raised in the prior draft have been resolved:
   pipeline, not manual creation.
 - Modify Maze: confirmed completed questions remain editable, not locked.
 
-No open items remain blocking this spec. The only still-outstanding external dependency
-is the designer's print template, tracked as roadmap step 8 above.
+No open items remain blocking this spec. The designer's print template has arrived and
+is specced in `pdf_export_spec.md` (roadmap step 8) — that doc's own §7 lists the
+decisions (icon set, branding placeholder, answer-key delivery, renderer tech) still
+needed before the renderer itself is built.

@@ -20,7 +20,7 @@ To fully create a Pickaxe Maze, the project follows a strict three-step pipeline
 3. **Template/Visual Generation**: **Only if** the data passes validation (exactly 1 solution), the layout is converted into the final visual output (PDF, Image) or mapped to a `design.md` visual template. This ensures that broken mazes are never sent to the visual rendering step.
 
 ## Directory Contents
-- [`rules.md`](./rules.md): Detailed explanation of the puzzle mechanics, constraints, and data representation.
-- [`validator_design.md`](./validator_design.md): Algorithmic design and pseudocode for writing a script to validate the maze data.
-- [`difficulty_setting.md`](./difficulty_setting.md): Defines the difficulty progression (Stars) and question distribution for Kinder, Primary, and Advanced levels.
-- [`generation_spec.md`](./generation_spec.md): The architectural specification for the script that generates the maze using a constructive path-first approach.
+- [`docs/rules.md`](./docs/rules.md): Detailed explanation of the puzzle mechanics, constraints, and data representation.
+- [`docs/validator_design.md`](./docs/validator_design.md): Algorithmic design and pseudocode for writing a script to validate the maze data.
+- [`docs/difficulty_setting.md`](./docs/difficulty_setting.md): Defines the difficulty progression (Stars) and question distribution for Kinder, Primary, and Advanced levels.
+- [`docs/generation_spec.md`](./docs/generation_spec.md): The architectural specification for the script that generates the maze using a constructive path-first approach.

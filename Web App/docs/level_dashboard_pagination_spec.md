@@ -1,0 +1,255 @@
+# Level Dashboard — Page-Row Redesign Spec
+
+This document specs a redesign of the Level Dashboard
+(`Web App/frontend/src/pages/LevelDashboardPage.tsx`), replacing today's flat 3-column
+question grid with a **list of page rows** — each row representing one page of the
+exported worksheet PDF (`pdf_export_spec.md`), holding 1-2 questions, reorderable via
+drag-and-drop. It also adds **Preview** and **Download (PDF + JSON)** to the dashboard's
+action bar.
+
+Written 2026-08-19 from the project owner's description, confirmed against the current
+codebase (`types/maze.ts`, `levelStore.ts`, `LevelDashboardPage.tsx`). As with
+`development_plan.md` and `pdf_export_spec.md`, anything marked **(ASSUMPTION)** was
+inferred and should be corrected if wrong. Three forks were confirmed directly with the
+project owner before writing this (§5.1, §6.2, §4.3) — noted inline as **(CONFIRMED)**.
+
+**Status:** spec only, no code written yet.
+
+---
+
+## 1. Why this doc exists
+
+Today, `current.questions` is a flat array rendered as a 3-column card grid — there is
+no concept of "which PDF page a question lands on." Now that `pdf_export_spec.md`
+defines the print output as a page sequence, the dashboard needs to let the user author
+that page structure directly (which questions share a page, in what order) rather than
+have a renderer guess it after the fact. This doc is that authoring UI's spec, plus the
+data-model change it requires.
+
+---
+
+## 2. Data Model Changes
+
+### 2.1 `PageRow` (new type)
+
+```ts
+export interface PageRow {
+  pageId: string           // stable id, independent of position — for React keys & DnD identity
+  questions: MazeQuestion[] // length 1 for the cover row (pages[0]); 1-2 for every other row
+}
+```
+
+### 2.2 `LevelProgress` (§4.3 of `development_plan.md` — changed)
+
+```ts
+export interface LevelProgress {
+  formatVersion: 2          // bumped from 1 — questions[] replaced by pages[]
+  mazeType: string
+  level: LevelName
+  sheetName: string
+  year: number
+  month: number
+  week: number
+  pages: PageRow[]          // pages[0] is always the cover/tutorial row (§4.1)
+  createdAt: string
+  updatedAt: string
+}
+```
+
+`MazeQuestion` itself (§4.2) is unchanged — page membership and order live entirely in
+`pages[]`'s structure, not as an index field on the question. This avoids a second
+source of truth that could drift out of sync with actual array position (the same
+"heuristic, not guaranteed" risk already flagged for `question_id` occurrence-numbering
+in `handoffs/handoff-2026-08-18-2321.md` — don't repeat that pattern here).
+
+### 2.3 Migration (`fileAdapter.ts`)
+
+`parseLevelProgressFile` must detect `formatVersion === 1` (or a missing `pages` key)
+and migrate on load:
+
+1. Take the sheet's existing flat `questions[]`.
+2. Its first question becomes `pages[0]` alone (the cover/tutorial row).
+3. Pack the remaining questions into rows of 2, in their existing array order, as
+   `pages[1..]`.
+4. Re-save under `formatVersion: 2` the next time the user exports.
+
+**(ASSUMPTION)** — step 2 assumes `questions[0]` is the tutorial question (true today,
+since `startNewLevel` always builds the 1★ tutorial first per `development_plan.md`
+§6.4). This is a one-time reflow of *old* save files only; the user can immediately
+rearrange the result via drag-and-drop, so a slightly-wrong initial grouping is cheap to
+fix, not a data-loss risk.
+
+### 2.4 `question_id` occurrence counting
+
+`buildEmptyQuestion`/`addQuestion`/`setQuestionStar` in `levelStore.ts` currently scan
+the flat `state.current.questions` array to compute each star's occurrence number (e.g.
+the `-2` in `kinder-3star-2`). With `pages[]`, this needs a
+`state.current.pages.flatMap(p => p.questions)` flatten step wherever that scan happens
+— call this out explicitly during implementation, it's an easy spot to miss.
+
+---
+
+## 3. Dashboard Layout
+
+Replace the `grid grid-cols-2 sm:grid-cols-3` question grid with a **vertical list of
+page rows**, each rendered full-width, in `pages[]` order:
+
+- **Row 0 (cover row):** visually distinct (e.g. a header-styled card) — shows it holds
+  the tutorial question, no drag handle, no remove control, no second-question slot.
+  Rendered from `pages[0].questions[0]` using the existing `QuestionSlotCard`.
+- **Rows 1..N:** each shows 1 or 2 `QuestionSlotCard`s side-by-side (or stacked on
+  narrow viewports), a small "Page N" label (N = the row's 1-based index within
+  `pages[]`, matching `pdf_export_spec.md` §4.1's page numbering), and — only when the
+  row currently holds exactly 1 question — a trailing **"+ Add question"** slot (reuses
+  today's `AddQuestionCard` star-picker dropdown, **(CONFIRMED)** unchanged from its
+  current behavior — this is only about *where* it's rendered, inside the row instead of
+  trailing the whole grid).
+- **"+ Add new page"** — a single control after the last row (not inside any row).
+  Clicking it appends a new `PageRow` with one freshly-built `empty` question at
+  **3-star** difficulty (star chosen regardless of level, since `starParams` for star 3
+  exists across every level's shared registry per `development_plan.md` §5 — it's just
+  not that level's own default distribution for Advanced, which is fine, the same
+  divergence-from-template allowance already covers this per §6.5).
+
+---
+
+## 4. Page Row Rules
+
+### 4.1 Cover row is fixed **(CONFIRMED)**
+
+Row 0 is not part of the drag-and-drop system at all: its question can never be dragged
+out, and no other question can be dropped into it. It always holds exactly one
+question — the tutorial. No "+ Add question" slot, no Remove control, no drop target
+behavior. This sidesteps any "cover row becomes empty" edge case entirely, at the cost
+of the tutorial question being permanently un-editable-in-position (its star/content can
+still presumably be changed via its own difficulty selector, same as before — that part
+is unchanged from today's `QuestionSlotCard`).
+
+### 4.2 Row capacity
+
+- Row 0: exactly 1, always.
+- All other rows: 1 or 2. A row showing 2 questions hides its "+ Add question" slot
+  (§3).
+
+### 4.3 Empty rows self-delete **(CONFIRMED interpretation)**
+
+Any row other than row 0 that drops to 0 questions (its only or last question dragged
+elsewhere) is removed from `pages[]` immediately — no empty placeholder row is ever
+rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
+separate page-number field), removing a row automatically renumbers everything after it
+— no explicit reindexing step needed.
+
+---
+
+## 5. Drag-and-Drop Mechanics
+
+The request describes two things that sound distinct but resolve to the same mechanic
+plus two supporting ones. Concretely, three drag gestures cover everything described:
+
+1. **Drag a question onto another question's card** → the two swap positions (their
+   `PageRow`s exchange that question). Works within the same row or across rows. Row
+   question-counts never change, so this never triggers §4.3's auto-delete and never
+   needs to touch row 0's lock (row 0 is excluded from being either side of a swap, per
+   §4.1).
+2. **Drag a question onto an empty "+ Add question" slot** in a row that currently has
+   1 question → moves the dragged question into that row as its second question,
+   removing it from its original row (which may then self-delete per §4.3 if that was
+   its only question).
+3. **Drag a question onto the "+ Add new page" control** → moves it into a brand-new
+   row created at the end of `pages[]` (its original row self-deletes per §4.3 if
+   emptied).
+
+### 5.1 Whole-row reordering is out of scope **(CONFIRMED by omission)**
+
+Nothing in the request asks for dragging an entire row as a unit — only individual
+questions move. Row order only changes as a side effect of gesture 3 (new rows append
+at the end) and rows disappearing (§4.3). If whole-page drag-reordering turns out to be
+wanted later, it's an additive change (drag handle on the row itself, unrelated to the
+per-question gestures above) — not built into this pass.
+
+### 5.2 Library
+
+No drag-and-drop library exists in `Web App/frontend/package.json` yet (checked
+2026-08-19 — only `react`, `react-dom`, `react-router-dom`, `zustand`). Implementing §5
+will need one; recommend `@dnd-kit/core` (+ `@dnd-kit/sortable` if the swap/move
+semantics above map cleanly onto its sortable primitives) — lightweight, no dependency
+on a specific backend, good accessibility defaults. This is a new dependency addition,
+flagging it here rather than adding it silently when implementation starts.
+
+---
+
+## 6. Preview & Download
+
+### 6.1 Button set (replaces today's Save Progress / Export JSON pair)
+
+- **Save Progress** — unchanged. Always-available JSON-only checkpoint download, same
+  as today.
+- **Preview** (new) — renders the worksheet as it would print, for the *current* state
+  of `pages[]`, regardless of completion (useful mid-work, incomplete questions render
+  as an empty/placeholder panel). **(ASSUMPTION)** — not gated on `allComplete`, since
+  its whole point is checking layout before finishing.
+- **Download** (new, replaces today's `Export JSON` button) — downloads **both** the
+  PDF and the JSON for the current sheet in one click. Gated on:
+  1. `allComplete` (same rule `Export JSON` already used), **and**
+  2. a fresh Preview having been generated since the last edit (§6.2).
+
+### 6.2 Preview-freshness gating **(CONFIRMED)**
+
+Rather than manually flagging "stale" on every mutating store action (error-prone — easy
+to miss a spot, same risk class as the `question_id` heuristic in §2.4), recommend a
+**snapshot-comparison** approach:
+
+- On Preview, store a serialized snapshot of `current` (e.g.
+  `JSON.stringify(current)`) in local component/store state as `previewedSnapshot`.
+- Download's enabled condition becomes:
+  `allComplete && previewedSnapshot === JSON.stringify(current)`.
+- Any edit at all (drag, add, remove, re-rate, sheet-info change, completing a question)
+  naturally changes the serialized form, so this can't drift out of sync the way a
+  manually-toggled boolean could.
+
+### 6.3 Dependency on the renderer (blocking)
+
+Preview needs *something* to render a PDF-like view from — and `pdf_export_spec.md` §7
+item 5 (backend vs. frontend rendering tech) is still an open decision, not yet spiked.
+Recommend **not** blocking this dashboard redesign on that decision:
+
+- **Phase A (buildable now):** ship the `pages[]` data model, the row-based dashboard UI,
+  and all drag-and-drop mechanics from §5. Wire **Preview** to an interim **in-app page
+  layout preview** — reuse the existing simple `CellRenderer` (`development_plan.md` §7)
+  arranged into the same page-row groupings, shown in a modal/new route. This is not
+  pixel-accurate to the final PDF, but it validates page/question grouping, which is the
+  part this redesign is actually about.
+- **Phase B (blocked on `pdf_export_spec.md` §7 item 5):** once renderer tech is chosen
+  and built, swap Preview to call it for real, and unblock Download's PDF half. JSON
+  download in Download can ship in Phase A regardless (it doesn't need the renderer).
+
+---
+
+## 7. Files Likely Touched (for implementation planning, not yet started)
+
+- `Web App/frontend/src/types/maze.ts` — add `PageRow`, change `LevelProgress.questions`
+  → `pages`, bump `formatVersion`.
+- `Web App/frontend/src/store/levelStore.ts` — restructure all actions around
+  `pages[]`; add swap/move actions for §5's three gestures; add row auto-delete (§4.3);
+  add preview-snapshot state (§6.2).
+- `Web App/frontend/src/storage/fileAdapter.ts` — `formatVersion: 1` → `2` migration
+  (§2.3); update filename stamping if it referenced `questions.length` anywhere.
+- `Web App/frontend/src/pages/LevelDashboardPage.tsx` — replace the grid with the
+  page-row list (§3); new Preview/Download buttons (§6.1).
+- New component(s): a `PageRowCard` (or similar) wrapping 1-2 `QuestionSlotCard`s per
+  row; the cover row likely reuses `QuestionSlotCard` directly with drag disabled.
+  `AddQuestionCard` is reused as-is inside a row (§3) — no changes expected there.
+- `Web App/frontend/package.json` — new drag-and-drop dependency (§5.2).
+
+---
+
+## 8. Open Decisions Still Needed
+
+1. **Renderer tech** (`pdf_export_spec.md` §7 item 5) — now blocks Phase B of §6.3, not
+   just final Export PDF.
+2. **DnD library pick** (§5.2) — `@dnd-kit` recommended, not yet confirmed.
+3. Everything else in this doc was either directly confirmed with the project owner
+   (§4.1, §4.3/§5.1, §6.2, and keeping the in-row add picker per §3) or is a low-risk
+   inferred default (migration grouping §2.3, 3-star new-page default already stated by
+   the project owner, Preview not gated on completeness §6.1) — flagged inline as
+   **(ASSUMPTION)** rather than blocking on it.

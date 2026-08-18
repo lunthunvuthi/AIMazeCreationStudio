@@ -1,4 +1,4 @@
-"""Backtracking DFS validator, ported from ../validator_design.md.
+"""Backtracking DFS validator, ported from ../docs/validator_design.md.
 
 Given a MazeData, explores every non-crossing path from S to G, tracking
 remaining pickaxes, and reports whether exactly one *distinct wall-set* is

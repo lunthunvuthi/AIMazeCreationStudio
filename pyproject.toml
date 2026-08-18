@@ -12,11 +12,11 @@ dev = ["pytest", "httpx"]
 pickaxe-maze = "pickaxe_maze.cli:main"
 
 [tool.setuptools]
-package-dir = { "" = "pickaxe-maze-creation", "maze_api" = "Web App/backend/maze_api" }
+package-dir = { "" = "Maze-All-Contents/pickaxe-maze-creation", "maze_api" = "Web App/backend/maze_api" }
 packages = ["pickaxe_maze", "maze_api"]
 
 [tool.pytest.ini_options]
-testpaths = ["pickaxe-maze-creation/tests", "Web App/backend/tests"]
+testpaths = ["Maze-All-Contents/pickaxe-maze-creation/tests", "Web App/backend/tests"]
 
 [build-system]
 requires = ["setuptools>=68"]
