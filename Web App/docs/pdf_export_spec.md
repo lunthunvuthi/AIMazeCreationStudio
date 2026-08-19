@@ -227,18 +227,24 @@ sample, two distinct files), so a teacher can hand out only the question sheet.
    include the sheet's highest star rating).
 4. ~~Answer key delivery~~ — **resolved 2026-08-19**: separate download
    (`Export PDF` + `Export Answer Key PDF`), matching the sample.
-5. **Renderer technology** — still open: backend Python (e.g. `reportlab` or
-   `weasyprint`, generating from `LevelProgress` server-side) vs. frontend
-   browser-print/CSS (reusing the existing React `CellRenderer`-adjacent components with
-   print stylesheets). Backend keeps rendering logic in one place matching the
-   maze-generation code; frontend reuses existing UI components. **Decided 2026-08-19:
-   spike both before committing** — no winner picked yet, next step is to build a small
-   throwaway version of each and compare. This blocks the dashboard's **Preview** button
-   (`level_dashboard_pagination_spec.md`) as well as final Export PDF.
-   **2026-08-19 update:** the real vector assets (`pdf_design_spec.md` §12) are plain
-   SVG — trivial to `<img>`/inline into the frontend or hybrid spike's DOM, more work for
-   `reportlab`'s canvas API (needs `svglib` or manual path-drawing to consume them). This
-   doesn't decide the renderer-tech question on its own, but it's a real new data point
-   favoring frontend/hybrid that didn't exist when the three spikes were built — worth
-   weighing alongside the spikes' already-documented trade-offs
-   (`Web App/spikes/pdf-renderer/README.md`) before making the final call.
+5. ~~Renderer technology~~ — **resolved 2026-08-19: hybrid.** Headless Playwright
+   drives the frontend's own React print view (`/spike/pdf-preview`) and calls
+   `page.pdf()` to produce a real, one-click-downloadable PDF — see
+   `Web App/spikes/pdf-renderer/README.md`'s "Hybrid spike" section for the full spike.
+   Chosen over backend (`reportlab`) and frontend-only (`window.print()`) because:
+   frontend/hybrid's CSS-reflow composability (no per-maze-type height contract to get
+   subtly wrong, unlike reportlab's immediate-mode canvas) was judged the most important
+   property for supporting many future maze types, each with their own question design;
+   frontend-only alone can't satisfy the Download button's one-click requirement
+   (`window.print()` requires a manual "Save as PDF" step); and the real vector assets
+   (`pdf_design_spec.md` §12) drop into the frontend's DOM trivially versus needing
+   `svglib`/manual path conversion for reportlab. Accepted trade-offs: a built/served
+   frontend bundle becomes a hard runtime dependency for PDF generation (not just a dev
+   convenience), current spike output is ~12× larger than reportlab's (186KB vs. 15KB,
+   likely closable with font subsetting, not yet attempted), and there's a second moving
+   part (dev/prod server + headless browser + capture step) versus a single Python
+   function call. This unblocks both the dashboard's **Preview** button
+   (`level_dashboard_pagination_spec.md` §6.3) and final Export PDF. **Not yet done:**
+   wiring real `LevelProgress`/`pages[]` data into the hybrid renderer (it only ever
+   renders the hardcoded spike fixture today) and building the cover page from the real
+   `Front Cover.svg` template (§3, §12.2) instead of the current approximated markup.

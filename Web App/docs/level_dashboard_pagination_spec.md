@@ -248,19 +248,20 @@ to miss a spot, same risk class as the `question_id` heuristic in §2.4), recomm
 
 ### 6.3 Dependency on the renderer (blocking)
 
-Preview needs *something* to render a PDF-like view from — and `pdf_export_spec.md` §7
-item 5 (backend vs. frontend rendering tech) is still an open decision, not yet spiked.
-Recommend **not** blocking this dashboard redesign on that decision:
+Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` §7 item 5
+(backend vs. frontend vs. hybrid rendering tech) is **resolved as of 2026-08-19: hybrid**
+(headless Playwright printing the frontend's React view to PDF) — but it is not yet
+*wired up*: the hybrid spike still only ever renders its own hardcoded fixture, not real
+`LevelProgress`/`pages[]` data.
 
-- **Phase A (buildable now):** ship the `pages[]` data model, the row-based dashboard UI,
-  and all drag-and-drop mechanics from §5. Wire **Preview** to an interim **in-app page
-  layout preview** — reuse the existing simple `CellRenderer` (`development_plan.md` §7)
-  arranged into the same page-row groupings, shown in a modal/new route. This is not
-  pixel-accurate to the final PDF, but it validates page/question grouping, which is the
-  part this redesign is actually about.
-- **Phase B (blocked on `pdf_export_spec.md` §7 item 5):** once renderer tech is chosen
-  and built, swap Preview to call it for real, and unblock Download's PDF half. JSON
-  download in Download can ship in Phase A regardless (it doesn't need the renderer).
+- **Phase A (done):** the `pages[]` data model, row-based dashboard UI, and Bonus toggle
+  are implemented (§4.4). Drag-and-drop from §5 is deliberately **not** built yet
+  (scope cut, see `pdf_export_spec.md`'s "Done" history / `MEMORY.md`). Preview/Download
+  buttons themselves are also not built yet — today's Save Progress/Export JSON stand in.
+- **Phase B (next, now unblocked):** wire real `LevelProgress` data into the hybrid
+  renderer (replacing its hardcoded fixture) and build the actual Preview/Download
+  buttons calling it, producing a true one-click PDF. JSON download doesn't need the
+  renderer and could ship independently of PDF readiness if useful as an interim step.
 
 ---
 
