@@ -170,11 +170,11 @@ per-question gestures above) — not built into this pass.
 ### 5.2 Library
 
 No drag-and-drop library exists in `Web App/frontend/package.json` yet (checked
-2026-08-19 — only `react`, `react-dom`, `react-router-dom`, `zustand`). Implementing §5
-will need one; recommend `@dnd-kit/core` (+ `@dnd-kit/sortable` if the swap/move
-semantics above map cleanly onto its sortable primitives) — lightweight, no dependency
-on a specific backend, good accessibility defaults. This is a new dependency addition,
-flagging it here rather than adding it silently when implementation starts.
+2026-08-19 — only `react`, `react-dom`, `react-router-dom`, `zustand`). **Confirmed
+2026-08-19** — `@dnd-kit/core` (+ `@dnd-kit/sortable` if the swap/move semantics above
+map cleanly onto its sortable primitives), for its lightweight footprint, no dependency
+on a specific backend, and good accessibility defaults. Still needs adding to
+`package.json` when implementation starts.
 
 ---
 
@@ -245,9 +245,10 @@ Recommend **not** blocking this dashboard redesign on that decision:
 
 ## 8. Open Decisions Still Needed
 
-1. **Renderer tech** (`pdf_export_spec.md` §7 item 5) — now blocks Phase B of §6.3, not
-   just final Export PDF.
-2. **DnD library pick** (§5.2) — `@dnd-kit` recommended, not yet confirmed.
+1. **Renderer tech** (`pdf_export_spec.md` §7 item 5) — still blocks Phase B of §6.3, not
+   just final Export PDF. **Decided 2026-08-19: spike both** (backend Python vs. frontend
+   browser-print/CSS) before committing — no winner picked yet.
+2. ~~DnD library pick~~ — **resolved 2026-08-19**: `@dnd-kit/core` (§5.2).
 3. Everything else in this doc was either directly confirmed with the project owner
    (§4.1, §4.3/§5.1, §6.2, and keeping the in-row add picker per §3) or is a low-risk
    inferred default (migration grouping §2.3, 3-star new-page default already stated by

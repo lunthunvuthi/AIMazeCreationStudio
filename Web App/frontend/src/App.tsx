@@ -7,6 +7,11 @@ import LevelDashboardPage from './pages/LevelDashboardPage'
 import QuestionEntryPage from './pages/QuestionEntryPage'
 import ManualWizardPage from './pages/ManualWizardPage'
 import RandomizeResultPage from './pages/RandomizeResultPage'
+// Spike-only route, not part of the product's real navigation — see
+// src/spike/PdfPreviewSpikePage.tsx's header comment and
+// Web App/spikes/pdf-renderer/README.md. Remove this route (and src/spike/)
+// once the renderer-technology decision (pdf_export_spec.md §7 item 5) lands.
+import PdfPreviewSpikePage from './spike/PdfPreviewSpikePage'
 
 function App() {
   return (
@@ -19,6 +24,7 @@ function App() {
       <Route path="/:mazeTypeId/dashboard/:questionId" element={<QuestionEntryPage />} />
       <Route path="/:mazeTypeId/dashboard/:questionId/create" element={<ManualWizardPage />} />
       <Route path="/:mazeTypeId/dashboard/:questionId/randomize" element={<RandomizeResultPage />} />
+      <Route path="/spike/pdf-preview" element={<PdfPreviewSpikePage />} />
     </Routes>
   )
 }

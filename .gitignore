@@ -11,3 +11,6 @@ Maze-All-Contents/pickaxe-maze-creation/input/*
 Maze-All-Contents/pickaxe-maze-creation/output/*
 !Maze-All-Contents/pickaxe-maze-creation/input/.gitkeep
 !Maze-All-Contents/pickaxe-maze-creation/output/.gitkeep
+
+Web App/spikes/pdf-renderer/output/*
+!Web App/spikes/pdf-renderer/output/.gitkeep

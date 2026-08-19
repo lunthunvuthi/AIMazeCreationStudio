@@ -1,0 +1,13 @@
+{
+  "name": "pdf-renderer-hybrid-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Throwaway spike: drive the frontend PDF-preview spike with a headless browser to produce a real downloadable PDF, testing the hybrid direction from ../README.md's 'Composability findings'. Not part of the real app's dependency graph.",
+  "scripts": {
+    "render": "node render_via_browser.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

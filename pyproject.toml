@@ -7,6 +7,9 @@ dependencies = ["fastapi", "uvicorn", "pydantic"]
 
 [project.optional-dependencies]
 dev = ["pytest", "httpx"]
+# Web App/spikes/pdf-renderer/ — throwaway renderer-tech comparison, not the
+# main app's dependencies. See that folder's README.
+pdf-renderer-spike = ["reportlab"]
 
 [project.scripts]
 pickaxe-maze = "pickaxe_maze.cli:main"
