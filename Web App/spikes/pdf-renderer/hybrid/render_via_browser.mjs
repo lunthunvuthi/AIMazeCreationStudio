@@ -42,6 +42,29 @@ const FRONTEND_DIR = path.resolve(__dirname, '../../../frontend')
 const OUTPUT_DIR = path.resolve(__dirname, '../output')
 const BASE_URL = 'http://localhost:5173/spike/pdf-preview'
 
+// Deliberately minimal — not a full re-implementation of fileAdapter.ts's
+// parseLevelProgressFile (formatVersion migration, field defaulting). Just
+// enough to fail fast with a clear message on the one shape the page
+// actually dereferences unconditionally (PdfPreviewSpikePage.tsx's
+// `fixture.pages[0].questions[0]` cover-question lookup), rather than a
+// TypeError deep inside React with no indication which input file caused it.
+async function loadFixtureData(dataPath) {
+  const raw = await readFile(path.resolve(dataPath), 'utf-8')
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (err) {
+    throw new Error(`--data ${dataPath} is not valid JSON: ${err.message}`)
+  }
+  if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
+    throw new Error(`--data ${dataPath} has no pages[] — expected a LevelProgress-shaped file with at least a cover row`)
+  }
+  if (!Array.isArray(parsed.pages[0].questions) || parsed.pages[0].questions.length === 0) {
+    throw new Error(`--data ${dataPath}'s pages[0] (the cover row) has no questions — expected at least one`)
+  }
+  return parsed
+}
+
 async function waitForServer(url, timeoutMs = 30000) {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -90,11 +113,9 @@ async function main() {
   const dataFlagIndex = args.indexOf('--data')
   const dataPath = dataFlagIndex !== -1 ? args[dataFlagIndex + 1] : null
 
-  let fixtureJson = null
+  let fixtureData = null
   if (dataPath) {
-    const raw = await readFile(path.resolve(dataPath), 'utf-8')
-    JSON.parse(raw) // fail fast on malformed input before spawning anything
-    fixtureJson = raw
+    fixtureData = await loadFixtureData(dataPath)
     console.log(`rendering real data from ${dataPath}`)
   }
 
@@ -107,10 +128,10 @@ async function main() {
     await waitForServer(BASE_URL)
     const browser = await chromium.launch()
     const page = await browser.newPage()
-    if (fixtureJson) {
-      await page.addInitScript((json) => {
-        window.__PDF_FIXTURE_DATA__ = json
-      }, fixtureJson)
+    if (fixtureData) {
+      await page.addInitScript((data) => {
+        window.__PDF_FIXTURE_DATA__ = data
+      }, fixtureData)
     }
 
     if (previewQuestion !== null) {

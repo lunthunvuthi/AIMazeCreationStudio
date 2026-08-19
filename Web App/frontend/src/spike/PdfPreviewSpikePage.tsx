@@ -13,12 +13,12 @@ import type { SpikeFixture } from './types'
 // unchanged.
 declare global {
   interface Window {
-    __PDF_FIXTURE_DATA__?: string
+    __PDF_FIXTURE_DATA__?: SpikeFixture
   }
 }
 
 function readFixture(): SpikeFixture {
-  return window.__PDF_FIXTURE_DATA__ ? JSON.parse(window.__PDF_FIXTURE_DATA__) : sampleFixture
+  return window.__PDF_FIXTURE_DATA__ ?? sampleFixture
 }
 
 // Spike: renders the same fixture as ../../spikes/pdf-renderer/backend/render_reportlab.py

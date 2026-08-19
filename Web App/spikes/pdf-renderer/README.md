@@ -265,18 +265,26 @@ infra trade-offs.
 transformation needed. The remaining gap was transport: Playwright's headless Chromium
 is a separate process with no access to the dashboard tab's Zustand store or the
 filesystem location of a user-downloaded save file. Solved via `page.addInitScript`:
-`render_via_browser.mjs --data path/to/level.json` reads the file, validates it parses,
-and injects it as `window.__PDF_FIXTURE_DATA__` before navigation;
+`render_via_browser.mjs --data path/to/level.json` reads and parses the file, then a
+`loadFixtureData` check fails fast (before the dev server or browser ever start) if
+`pages[]` is missing/empty or `pages[0]` has no `questions` — a deliberately minimal
+check, not a full re-implementation of `fileAdapter.ts`'s `parseLevelProgressFile`
+migration/validation, just enough to catch the one shape the page dereferences
+unconditionally (`fixture.pages[0].questions[0]`, the cover question) with a clear
+error instead of a raw `TypeError` inside React. The already-parsed object (not a JSON
+string) is passed straight through `addInitScript` as `window.__PDF_FIXTURE_DATA__`;
 `PdfPreviewSpikePage.tsx`'s `readFixture()` reads that global if present, falling back
 to the hardcoded `sampleFixture` otherwise (so the no-`--data` path, and the
 manual-browser `/spike/pdf-preview` route, are unchanged). Verified by rendering a
 hand-modified copy of `sample_fixture.json` (different level/month/week, and the Bonus
 flag moved to a different page) through `--data` and visually confirming the PDF
-reflects the injected values, not the default fixture. **Not yet built:** the actual
-Preview/Download buttons in `LevelDashboardPage.tsx` that would produce this JSON from
-`current` and call this script — this only proves the renderer *can* consume real data,
-not a one-click UI path yet (that's still real backend-service work, see
-`pdf_export_spec.md` §7 item 5's "not yet done" note).
+reflects the injected values, not the default fixture, plus confirming both a malformed
+(`not json`) and structurally-invalid (`{"pages": []}`) file error out immediately with
+a clear message. **Not yet built:** the actual Preview/Download buttons in
+`LevelDashboardPage.tsx` that would produce this JSON from `current` and call this
+script — this only proves the renderer *can* consume real data, not a one-click UI path
+yet (that's still real backend-service work, see `pdf_export_spec.md` §7 item 5's "not
+yet done" note).
 
 ## Regenerating the fixture
 
