@@ -20,10 +20,20 @@
 //   node render_via_browser.mjs                              # -> output/hybrid_question.pdf + hybrid_answer_key.pdf
 //   node render_via_browser.mjs --preview-question 3          # -> output/hybrid_question_preview_3.pdf
 //   node render_via_browser.mjs --preview-question 3 --answer-key
+//   node render_via_browser.mjs --data path/to/level.json     # render a real exported LevelProgress instead of the sample fixture
+//
+// --data wiring: LevelProgress (Web App/frontend/src/types/maze.ts) is a
+// structural superset of the spike's SpikeFixture (same field names, plus
+// createdAt/updatedAt which the page ignores), so no transformation is
+// needed. The headless page has no access to this Node process's memory or
+// the real app's Zustand store, so the JSON is handed across via
+// page.addInitScript — it sets a global before the spike page's React code
+// runs, and PdfPreviewSpikePage.tsx reads it in place of the hardcoded
+// sampleFixture import (see that file's readFixture()).
 
 import { chromium } from 'playwright'
 import { spawn } from 'node:child_process'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -77,6 +87,16 @@ async function main() {
   const answerKeyOnly = args.includes('--answer-key')
   const previewFlagIndex = args.indexOf('--preview-question')
   const previewQuestion = previewFlagIndex !== -1 ? Number(args[previewFlagIndex + 1]) : null
+  const dataFlagIndex = args.indexOf('--data')
+  const dataPath = dataFlagIndex !== -1 ? args[dataFlagIndex + 1] : null
+
+  let fixtureJson = null
+  if (dataPath) {
+    const raw = await readFile(path.resolve(dataPath), 'utf-8')
+    JSON.parse(raw) // fail fast on malformed input before spawning anything
+    fixtureJson = raw
+    console.log(`rendering real data from ${dataPath}`)
+  }
 
   await mkdir(OUTPUT_DIR, { recursive: true })
 
@@ -87,6 +107,11 @@ async function main() {
     await waitForServer(BASE_URL)
     const browser = await chromium.launch()
     const page = await browser.newPage()
+    if (fixtureJson) {
+      await page.addInitScript((json) => {
+        window.__PDF_FIXTURE_DATA__ = json
+      }, fixtureJson)
+    }
 
     if (previewQuestion !== null) {
       const suffix = answerKeyOnly ? '_answer_key' : ''

@@ -204,6 +204,7 @@ npm install    # once
 node render_via_browser.mjs                              # -> output/hybrid_question.pdf + hybrid_answer_key.pdf
 node render_via_browser.mjs --preview-question 3          # -> output/hybrid_question_preview_3.pdf, isolated
 node render_via_browser.mjs --preview-question 3 --answer-key
+node render_via_browser.mjs --data path/to/level.json     # render a real exported LevelProgress
 ```
 
 **It worked, cleanly, on the first real attempt.** 5-page sheet (cover + 3
@@ -250,6 +251,32 @@ PDF generation surfaced it immediately.
   selector changed and the answer-key toggle silently didn't click) for a
   production job queue to handle gracefully, though none of that showed up
   in this spike's runs.
+
+## Renderer-tech decision + wiring real data in
+
+**2026-08-19 — hybrid chosen** (see `Web App/docs/pdf_export_spec.md` §7 item 5 for the
+full rationale): the composability finding above, plus frontend-only's inability to
+satisfy the Download button's one-click requirement, outweighed hybrid's file-size and
+infra trade-offs.
+
+**Real `LevelProgress` data now wired in, same day, later session.** `LevelProgress`
+(`types/maze.ts`) turned out to be a structural superset of this spike's `SpikeFixture`
+(same field names, plus `createdAt`/`updatedAt` which the page ignores) — no
+transformation needed. The remaining gap was transport: Playwright's headless Chromium
+is a separate process with no access to the dashboard tab's Zustand store or the
+filesystem location of a user-downloaded save file. Solved via `page.addInitScript`:
+`render_via_browser.mjs --data path/to/level.json` reads the file, validates it parses,
+and injects it as `window.__PDF_FIXTURE_DATA__` before navigation;
+`PdfPreviewSpikePage.tsx`'s `readFixture()` reads that global if present, falling back
+to the hardcoded `sampleFixture` otherwise (so the no-`--data` path, and the
+manual-browser `/spike/pdf-preview` route, are unchanged). Verified by rendering a
+hand-modified copy of `sample_fixture.json` (different level/month/week, and the Bonus
+flag moved to a different page) through `--data` and visually confirming the PDF
+reflects the injected values, not the default fixture. **Not yet built:** the actual
+Preview/Download buttons in `LevelDashboardPage.tsx` that would produce this JSON from
+`current` and call this script — this only proves the renderer *can* consume real data,
+not a one-click UI path yet (that's still real backend-service work, see
+`pdf_export_spec.md` §7 item 5's "not yet done" note).
 
 ## Regenerating the fixture
 

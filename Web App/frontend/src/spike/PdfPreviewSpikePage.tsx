@@ -3,6 +3,23 @@ import { MONTH_NAMES } from '../types/maze'
 import { GRAY, INK, LaurelWreath, MascotBust, MascotFull } from './icons'
 import { QuestionPanel } from './pdfMazeTypeRegistry'
 import { sampleFixture } from './sampleFixture'
+import type { SpikeFixture } from './types'
+
+// render_via_browser.mjs's --data flag injects a real LevelProgress payload
+// here via page.addInitScript before navigation (LevelProgress is a
+// structural superset of SpikeFixture — see types.ts). Falls back to the
+// hardcoded sample fixture when nothing was injected, so the plain `npm run
+// dev` / manual-browser path (and the no-`--data` hybrid render) are
+// unchanged.
+declare global {
+  interface Window {
+    __PDF_FIXTURE_DATA__?: string
+  }
+}
+
+function readFixture(): SpikeFixture {
+  return window.__PDF_FIXTURE_DATA__ ? JSON.parse(window.__PDF_FIXTURE_DATA__) : sampleFixture
+}
 
 // Spike: renders the same fixture as ../../spikes/pdf-renderer/backend/render_reportlab.py
 // using real app components plus browser print CSS, for comparing renderer
@@ -50,7 +67,7 @@ function PageNumberBadge({ number, isBonus }: { number: number; isBonus: boolean
 export default function PdfPreviewSpikePage() {
   const [answerKey, setAnswerKey] = useState(false)
   const [previewIndex, setPreviewIndex] = useState<number | 'sheet'>('sheet')
-  const fixture = sampleFixture
+  const fixture = useMemo(readFixture, [])
 
   const coverQuestion = fixture.pages[0].questions[0]
   const questionPages = fixture.pages.slice(1)

@@ -1,7 +1,9 @@
 // Spike-only types for the PDF-renderer comparison (see ../../../spikes/pdf-renderer
-// at repo root). Mirrors the *future* `PageRow`/`pages[]` model from
-// level_dashboard_pagination_spec.md §2.1, which the real LevelProgress/store don't
-// implement yet — this fixture stands in for what a finished dashboard would produce.
+// at repo root). Structurally identical to the real `PageRow`/`LevelProgress`
+// (types/maze.ts) — kept as a separate type only so this spike doesn't import
+// LevelProgress's extra createdAt/updatedAt fields. render_via_browser.mjs's --data
+// flag passes a real LevelProgress straight through as this shape; see
+// PdfPreviewSpikePage.tsx's readFixture().
 import type { MazeQuestion } from '../types/maze'
 
 export interface SpikePageRow {

@@ -244,7 +244,14 @@ sample, two distinct files), so a teacher can hand out only the question sheet.
    likely closable with font subsetting, not yet attempted), and there's a second moving
    part (dev/prod server + headless browser + capture step) versus a single Python
    function call. This unblocks both the dashboard's **Preview** button
-   (`level_dashboard_pagination_spec.md` §6.3) and final Export PDF. **Not yet done:**
-   wiring real `LevelProgress`/`pages[]` data into the hybrid renderer (it only ever
-   renders the hardcoded spike fixture today) and building the cover page from the real
+   (`level_dashboard_pagination_spec.md` §6.3) and final Export PDF.
+   **2026-08-19 update:** the hybrid renderer can now consume a real `LevelProgress`
+   JSON file directly (`render_via_browser.mjs --data path/to/level.json`, injected into
+   the headless page via `page.addInitScript` since `LevelProgress` is a structural
+   superset of the spike's fixture type) — see
+   `Web App/spikes/pdf-renderer/README.md`'s "Renderer-tech decision + wiring real data
+   in" section. **Still not done:** the actual Preview/Download buttons in
+   `LevelDashboardPage.tsx` that would serialize `current` and drive this script/a real
+   backend service (how the browser triggers server-side Playwright is a separate
+   architectural decision, not yet made), and building the cover page from the real
    `Front Cover.svg` template (§3, §12.2) instead of the current approximated markup.
