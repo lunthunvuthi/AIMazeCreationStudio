@@ -24,14 +24,20 @@ export interface PdfQuestionPanelProps {
   tutorialDecorations?: boolean
 }
 
+// 2026-08-19: rendered 3x the original size (owner review of hybrid_question.pdf)
+// — scaled via explicit width/height rather than the viewBox/internal geometry, so
+// the icon+bubble proportions and layout math below are unchanged.
+const BADGE_SCALE = 3
+
 function Badge({ pickaxeCount }: { pickaxeCount: number }) {
   const bubbleW = 22
   const iconSize = 16
+  const vbWidth = pickaxeCount * iconSize + bubbleW + 6
   return (
     <svg
-      viewBox={`0 0 ${pickaxeCount * iconSize + bubbleW + 6} ${iconSize}`}
-      className="mb-1 h-6"
-      style={{ width: `${pickaxeCount * iconSize + bubbleW + 6}px` }}
+      viewBox={`0 0 ${vbWidth} ${iconSize}`}
+      className="mb-1"
+      style={{ width: `${vbWidth * BADGE_SCALE}px`, height: `${iconSize * BADGE_SCALE}px` }}
     >
       {Array.from({ length: pickaxeCount }, (_, i) => (
         <PickaxeIcon key={i} cx={iconSize * (i + 0.5)} cy={iconSize / 2} size={iconSize} />

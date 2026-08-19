@@ -46,16 +46,25 @@ function readFixture(): SpikeFixture {
 // flag now, not computed from star rating (pdf_design_spec.md §7's laurel
 // wreath replaces the plain box entirely on a Bonus row, it doesn't overlay
 // on top of it).
+// Page-numbering rule: odd pages sit top-left, even pages top-right
+// (per-project print convention, confirmed 2026-08-19 against the real
+// output — not derivable from the sample, a direct rule from the owner).
+// 2026-08-19: rendered 2x the original h-12/w-12 size (owner review of
+// hybrid_question.pdf) — viewBox/internal geometry unchanged, both the
+// plain box and the laurel-wreath variant share this wrapper so both scale
+// together.
 function PageNumberBadge({ number, isBonus }: { number: number; isBonus: boolean }) {
+  const alignClass = number % 2 === 0 ? 'ml-auto' : ''
+  const badgeClass = `mb-4 block h-24 w-24 ${alignClass}`
   if (isBonus) {
     return (
-      <svg viewBox="0 0 48 48" className="mb-4 block h-12 w-12">
+      <svg viewBox="0 0 48 48" className={badgeClass}>
         <LaurelWreath cx={24} cy={24} width={40} number={number} />
       </svg>
     )
   }
   return (
-    <svg viewBox="0 0 48 48" className="mb-4 block h-12 w-12">
+    <svg viewBox="0 0 48 48" className={badgeClass}>
       <rect x={2} y={2} width={44} height={44} fill="white" stroke={INK} strokeWidth={0.8} />
       <text x={24} y={31} textAnchor="middle" fontSize={20} fontWeight="bold" fill={INK}>
         {number}
@@ -249,11 +258,14 @@ export default function PdfPreviewSpikePage() {
           Let&apos;s create your own original mission!
           <span className="h-px w-8" style={{ backgroundColor: INK }} />
         </p>
-        <div className="mt-8 h-[160mm] w-full" />
+        <div className="mt-8 h-[84mm] w-full" />
         <p className="text-lg font-bold" style={{ color: INK }}>
           I did it!
         </p>
-        <svg viewBox="0 0 100 100" className="h-24 w-24">
+        {/* 2026-08-19: 4x the original h-24/w-24 size (owner review of
+            hybrid_question.pdf) — viewBox/internal size unchanged, only the
+            rendered box is scaled. */}
+        <svg viewBox="0 0 100 100" className="h-[384px] w-[384px]">
           <MascotFull cx={50} cy={50} size={70} />
         </svg>
       </div>
