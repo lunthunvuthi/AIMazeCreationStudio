@@ -36,6 +36,13 @@ it precisely rather than eyeball a low-res thumbnail:
 Re-run this yourself if a value here is ever in doubt — nothing here required manual
 measurement in an image editor, it's all scriptable against the two source PDFs.
 
+**Superseded where noted (2026-08-19):** the designer has since dropped real vector
+source files for the icons, mascots, and the cover page into
+`Web App/frontend/public/components/svg/` — see **§12** for the full catalog. Wherever
+§12 gives an exact vector for something this section had to estimate from a raster
+(Start/Goal icons, pickaxe icon, laurel wreath, mascot, cover-page text/fonts), §12's
+version is authoritative and this section's estimate is kept only as history/context.
+
 ---
 
 ## 1. Page & color fundamentals
@@ -83,6 +90,21 @@ registered with `pdfmetrics.registerFont` — don't fall back to Helvetica for a
 user-facing, the rounded letterforms are a deliberate part of the brand look. If the
 frontend/CSS renderer is chosen, both are available as Google Fonts.
 
+**Correction (2026-08-19), header-bar text only:** `Front Cover.svg` (§12.2) is not a
+raster — it's the designer's actual editable vector master, and it names its fonts
+directly in CSS: the header bar's "Name:" label, the "Kinder"/"Aug / Week1" placeholder
+fields, and the "Direction" pill text are all set in **`Roboto-Bold`/`Roboto`**, and the
+small Japanese katakana logotype line is set in **`YuGo-Bold-83pv-RKSJ-H`/`YuGothic`**.
+Use these real family names for anything covered by that file instead of the
+Baloo2/Nunito shape-substitutes above. The "Think!"/"Think!" wordmark itself is **not**
+live text in the file — the designer converted it to outlined vector paths (a common
+step for locking a logo lockup), so it carries no font name; reproduce it as a fixed
+vector shape, not as text in any font. The Baloo2/Fredoka substitute above still applies
+to text that has **no** vector source at all — chiefly the "Let's do it" banner title and
+the bonus page's outlined "Be a mission maker!" title, neither of which exists as text or
+outlined paths in `Front Cover.svg` (§12.2 confirms exactly what is and isn't in that
+file) — those still need a substitute font choice when implemented.
+
 ---
 
 ## 3. Header bar (cover page only)
@@ -129,6 +151,13 @@ Left-to-right, single row, ~14mm tall band at the top of the page:
   white/light snout, one paw raised holding a pencil (diagonal, tip-down). This is the
   company's confirmed-own IP — reproduce directly, don't genericize it into an
   unrelated placeholder mascot.
+  **Superseded 2026-08-19:** this exact bust-crop pose is the real vector `symbol.svg`
+  (§12.1, viewBox 89.43×113.05) — and it's confirmed already embedded (as raw paths, not
+  a `<use>` reference) inside `Front Cover.svg` itself, clipped to bust height at
+  roughly `x=462.6, y=134.6, w=89.4, h=78.4` in that file's coordinate space (§12.2). If
+  building the cover from `Front Cover.svg` directly, this mascot needs no separate
+  placement — it's already positioned; if reconstructing the cover programmatically
+  instead, use `symbol.svg` at that same crop.
 - **Decorative motif:** below the banner, a light-gray (`#D1D3D2`) "road" graphic —
   a horizontal line strung with circular beads and a jagged mountain-peak/crown
   silhouette in the middle, recurring again lower on the page behind the direction box,
@@ -237,12 +266,15 @@ lighter/dotted line standing in for "open passage."
   torso, one arm swinging back and one bent forward, legs mid-stride) — matches this
   project's already-confirmed decision (`pdf_export_spec.md` §7 item 1) to use icons
   rather than the in-app editor's plain "S" letter. Centered in the start cell.
+  **Superseded 2026-08-19:** use the real vector, `symbol-16.svg` (§12.1), directly —
+  don't hand-draw this shape from the description above.
 - **Goal:** a flag on a pole with a small ball finial at the top, the pennant is a
   **square frame** (not a solid triangle) containing a **black 5-point star**,
   mounted so the pole's base sits near the cell's floor. This square-frame-with-star
   version is the **only** goal icon used on real question/answer-key panels — the
   crooked/triangular "damaged flag" that appears in §5's incorrect-example illustration
   is a one-off failure depiction, not an alternate standard icon.
+  **Superseded 2026-08-19:** use the real vector, `symbol-17.svg` (§12.1), directly.
 
 ### 6.4 Pickaxe-count badge
 
@@ -257,6 +289,10 @@ lighter/dotted line standing in for "open passage."
   border and bold digit, containing the same `pickaxe_count` number. Note this repeats
   the count both as icon-count *and* digit — deliberate redundancy for pre-reading
   Kinder-age children, not a bug to simplify away.
+  **Superseded 2026-08-19:** the pickaxe glyph itself is the real vector,
+  `symbol-26.svg` (§12.1) — reuse it for both the top-of-maze badge described here
+  and any other in-app "how many pickaxes left" display, since it's the one confirmed
+  pickaxe icon for this maze type.
 
 ---
 
@@ -272,12 +308,25 @@ lighter/dotted line standing in for "open passage."
   a wider sample confirms it — **(estimated / unresolved)**, flag if a designer
   clarification becomes available.
 - **Laurel wreath:** appears flanking the page-number box on the **last two**
-  question-numbered pages of this sample (matches `pdf_export_spec.md` §4.1's
-  already-confirmed "computed per-row, sheet's highest star" interpretation) — solid
-  **ink-black** simple line-art laurel sprigs (small leaf shapes along a curved stem),
-  mirrored on both sides of the number box, with a tiny decorative flourish mark
-  beneath the number. **Not colored gold/green** — this corrects the first renderer
-  spike's colored-wreath assumption.
+  question-numbered pages of this sample — solid **ink-black** simple line-art laurel
+  sprigs (small leaf shapes along a curved stem), mirrored on both sides of the number
+  box, with a tiny decorative flourish mark beneath the number. **Not colored
+  gold/green** — this corrects the first renderer spike's colored-wreath assumption.
+  **Which pages get it is no longer computed from star rating — see
+  `level_dashboard_pagination_spec.md` §4.4**: it's now an explicit per-page-row
+  **"Bonus" toggle** the user sets on the Level Dashboard, not something the renderer
+  infers from `questions[]`.
+  **Superseded 2026-08-19 — real vector source:** this whole decoration is
+  `symbol-19.svg` (§12.1), a wreath-only vector with the exact same laurel-sprig
+  geometry described above, **plus** a companion file `symbol-18.svg` that is the
+  identical wreath with a page number already baked in as live text (`"5"`, in
+  `Futura-Medium`, 30px, positioned at `translate(19.83, 26.42)` inside the 57.96×47.08
+  viewBox). **Implementation approach:** use `symbol-19.svg`'s wreath as the shape and
+  render the row's actual page number as text in the same `Futura-Medium`-equivalent
+  weight at that same anchor point, rather than treating `symbol-18.svg`'s baked-in "5"
+  as reusable content — it's a one-off example digit, not a template placeholder. **Open
+  gap:** that anchor point was measured/positioned for a single-digit number; a
+  2-digit page number (10+) will need its own horizontal centering, not yet worked out.
 - **Panel count per page:** this sample uses **1 or 2 panels per page**, and where 2
   appear they are **stacked vertically** (one panel, its badge, then the next panel
   below with its own badge) — **not side-by-side horizontally**. This corrects the
@@ -335,6 +384,11 @@ lighter/dotted line standing in for "open passage."
   §4 but shown **full body** this time — squinting closed eyes drawn as `>` and `<`
   characters (a happy/proud expression, distinct from the header's round-eyed
   "determined" look), holding a pencil, standing on a soft gray drop-shadow ellipse.
+  **Resolved 2026-08-19:** `symbol-22.svg` (§12.1, viewBox 85.04×85.04) is **not** an
+  exact match for this pose (confirmed by the project owner — it's a different
+  full-body Hatenyan pose, not the squinting `>`/`<` expression above), but it's
+  **approved as the interim placeholder** for this slot until/unless a pose-accurate
+  vector shows up. Use it directly, don't hand-draw a substitute.
 
 ---
 
@@ -358,6 +412,11 @@ time:
       decorations (those belong only on the cover's tutorial illustration).
 - [ ] Laurel wreath is plain ink-black line art, not colored.
 - [ ] Cover and bonus pages have a full-page black border; question pages don't.
+- [ ] Start/Goal/pickaxe/laurel icons come from the real vectors in §12.1, not
+      hand-drawn approximations.
+- [ ] Laurel wreath appears only on rows the user explicitly marked "Bonus" on the
+      Level Dashboard (`level_dashboard_pagination_spec.md` §4.4) — not computed from
+      star rating.
 
 ---
 
@@ -366,10 +425,95 @@ time:
 Being upfront about the gap between "measured" and "close enough" — a raster source
 has a hard ceiling on precision:
 
-- **Exact font files** — §2's substitutes are shape-matches, not the real typeface.
+- **Exact font files for text with no vector source** — the "Let's do it" banner title
+  and the bonus page's outlined "Be a mission maker!" title have no live text or
+  outlined-path source anywhere in `Front Cover.svg` (§12.2 confirms this directly), so
+  §2's Baloo2/Fredoka substitutes still apply to those two specifically. Every other
+  header-bar text element now has a confirmed real font — see §2's 2026-08-19
+  correction.
 - **Dot radius** — estimated from visual proportion to the wall-line thickness, not a
   clean scan (JPEG edges made a precise run-length measurement noisy at that scale).
 - **Corner radii** (direction box, pill, banner-ribbon notches) — visual estimates,
   not measured in mm.
 - **Cosmetic decorative motifs** (§4's road graphic, §5's incorrect-example panel) —
   intentionally deprioritized; see those sections for why they're safe to simplify.
+- **`symbol-22.svg`'s exact pose** — confirmed 2026-08-19 to be a *different* full-body
+  Hatenyan pose than §9's squinting-eyes description, approved as an interim
+  placeholder anyway (§9). Swap it for a pose-accurate vector later if one appears;
+  not blocking.
+
+---
+
+## 12. Designer vector asset drop (confirmed 2026-08-19)
+
+A folder of real vector source files appeared at
+`Web App/frontend/public/components/svg/` mid-session on 2026-08-19 and was confirmed by
+the project owner (role-by-role, not just surveyed) the same day. This supersedes every
+hand-drawn/estimated icon shape elsewhere in this doc — see the inline "Superseded"
+notes in §4, §6.3, §6.4, §7, §9 for exactly which paragraphs each file replaces.
+
+### 12.1 Per-file catalog
+
+| File | Role | Used in PickAxe PDF? |
+|---|---|---|
+| `Front Cover.svg` | Full A4 vector **cover-page shell** — see §12.2, it's not a flat icon, it's the actual page template. | Yes — the cover page (§3/§4/§5). |
+| `symbol-16.svg` | **Start** icon (walking stick figure). Fill `#15120e`. | Yes — §6.3. |
+| `symbol-17.svg` | **Goal** icon (flagpole, square frame, 5-point star). Fill `#231f20`. | Yes — §6.3. |
+| `symbol-18.svg` | Laurel wreath **with** a baked-in page number ("5", live text, `Futura-Medium` 30px) — a worked example, not a reusable template. | Reference only — see §7. |
+| `symbol-19.svg` | Laurel wreath **without** a number — the actual shape to reuse, number rendered separately on top. | Yes — §7, gated by the new per-row "Bonus" toggle (`level_dashboard_pagination_spec.md` §4.4). |
+| `symbol-20.svg` | Camera icon. | **No** — a different maze/game type's content. Keep on file for when that type is built; don't reference it from the PickAxe renderer. |
+| `symbol-21.svg` | Trampoline icon with a directional arrow; the arrow can be flipped/rotated to any of the 4 directions. | **No** — different game content, same as above. |
+| `symbol-22.svg` | Full-body Hatenyan mascot — a different pose than §9's raster description, **approved 2026-08-19 as the interim placeholder** for that slot regardless. | Yes — bonus page footer mascot (§9). |
+| `symbol-23.svg` | **Posuru** — a second mascot (a bear). | **No — confirmed 2026-08-19.** Not used anywhere in the PickAxe worksheet; reserved for a different maze type's content. |
+| `symbol-24.svg` | Directional path tile: entry-left/exit-down, reversible and rotatable to produce every entry/exit combination; dark area = tile, white area = the path. | **No** — different game content. |
+| `symbol-25.svg` | Directional path tile: entry-left/exit-right, same rotate/reverse behavior as `symbol-24.svg`. | **No** — different game content. |
+| `symbol-26.svg` | **Pickaxe** icon (angled handle + wedge head). Fill `#414042`. | Yes — §6.4, and anywhere else in-app that shows a pickaxe count. |
+| `symbol-27.svg` | Right-pointing arrow, **white** fill, with a gray drop-shadow beneath it that must be redrawn (not just rotated) if the arrow itself is rotated. | **No** — different game content. |
+| `symbol-28.svg` | Right-pointing arrow, **dark** fill, same shadow-redraw caveat as `symbol-27.svg`. | **No** — different game content. |
+| `symbol.svg` | Hatenyan mascot bust (cropped to chest height) — the cover-banner pose. Already embedded directly inside `Front Cover.svg` (§12.2). | Yes — §4, cover title banner. |
+
+`symbol-20/21/24/25/27/28` are noted here purely so a future maze-type implementation
+doesn't have to re-discover what they are — none of them belong in the PickAxe renderer.
+
+### 12.2 `Front Cover.svg` anatomy — what's already built vs. what still needs filling in
+
+This file's viewBox is `0 0 595.28 841.89` — exactly A4 at 72pt/in, i.e. it's not an icon,
+it's the **literal cover-page template**, built at real print scale. Opening it directly
+and inspecting it (not just surveying the viewBox) found:
+
+**Already present in the file (reuse as-is):**
+- The "Think!"/"Think!" wordmark — but as **outlined vector paths**, not live text (the
+  designer converted it to curves to lock the logo lockup). Fill `#231f20`. Treat as a
+  fixed shape, not as text in any font.
+- Live, **editable text** for the three dynamic header fields: `"Name:"` label at
+  `translate(189.36, 86.64)`, a dashed name-fill line (`stroke-dasharray: 0 5`, gray
+  `#a7a9ac`, matching §3's "reduced visual weight" description), the level field
+  (`"Kinder"`, at `translate(473.92, 82.49)`, `Roboto-Bold` 18px, `#231f20`), and the
+  month/week field (`"Aug / Week1"`, at `translate(460.72, 102.53)`, `Roboto-Bold` 14px,
+  `#58595b`). These three are the sample's own placeholder values — replace them with
+  the real `LevelProgress` data at render time, don't reproduce them literally.
+- The title-banner rectangle (brand-gray fill) and the cropped mascot bust inside it
+  (§4's note above) — positioned, not just described.
+- The full-page black outer border rule (§1).
+- The Direction box: the rounded-rect container and the "Direction" pill tab with its
+  live text label and decorative pencil-glyph paths, all positioned and ready.
+- A small unidentified rounded-rect + icon near the header
+  (`x≈121.9, y≈111.9, w≈15.5, h≈14.3`) — present in the file but not confirmed against
+  anything in this spec; flag it if it turns out to matter, don't assume its purpose.
+
+**Genuinely blank, still needs to be composited in (this is what "filling in the
+tutorial question" means in practice):**
+- The "Let's do it" title text itself — not present as text or as outlined paths
+  anywhere in the file.
+- The instruction sentence ("Let's break the walls with a pickaxe...").
+- **Both example maze panels** — the correct-example panel (with its sparkle/pickaxe-
+  bubble decorations, §5) and the incorrect-example panel (crossed-out, damaged flag,
+  §5) — neither exists in the file at all; the Direction box container is empty inside.
+- The decorative footer motif (§4's cosmetic road/mountain graphic) — not found in this
+  file either, and still lowest-priority per §4/§11.
+
+Net effect: a renderer that starts from this file as its cover template gets the whole
+static shell (logo, header fields, banner, mascot, border, Direction box shell) for
+free, and only needs to generate/insert the tutorial-specific content above — which
+lines up with `pdf_export_spec.md` §3's existing description of what's data-driven on
+this page.

@@ -1,6 +1,7 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getMazeType } from '../registry/mazeTypes'
 import { useLevelStore } from '../store/levelStore'
+import { flattenPages } from '../types/maze'
 
 // §6.5 — selecting an empty/in-progress slot opens the Create Myself vs
 // Randomize choice; selecting an already-complete slot reopens it directly
@@ -14,7 +15,7 @@ export default function QuestionEntryPage() {
   if (!mazeType) return <Navigate to="/" replace />
   if (!current || current.mazeType !== mazeType.id) return <Navigate to={`/${mazeType.id}/new`} replace />
 
-  const question = current.questions.find((q) => q.question_id === questionId)
+  const question = flattenPages(current.pages).find((q) => q.question_id === questionId)
   if (!question) return <Navigate to={`/${mazeType.id}/dashboard`} replace />
 
   if (question.status === 'complete' && question.origin === 'manual') {

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="page" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 86.31 85.04">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        clip-path: url(#clippath);
+      }
+
+      .cls-4, .cls-2 {
+        stroke: #000;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8px;
+      }
+
+      .cls-5 {
+        fill: #fff;
+      }
+
+      .cls-6 {
+        fill: #e0e0e0;
+      }
+    </style>
+    <clipPath id="clippath">
+      <rect class="cls-1" x=".9" y="0" width="85.04" height="85.04"/>
+    </clipPath>
+    <symbol id="_新規シンボル_9" data-name="新規シンボル 9" viewBox="0 0 86.31 85.04">
+      <g>
+        <rect class="cls-1" x="1.27" y="0" width="85.04" height="85.04"/>
+        <g class="cls-3">
+          <polygon class="cls-5" points="57.59 30.61 57.59 54.42 66.1 54.42 66.1 30.61 57.59 30.61"/>
+          <rect class="cls-6" x="57.59" y="46.14" width="8.5" height="8.28"/>
+          <polygon class="cls-2" points="57.59 30.61 57.59 54.42 66.1 54.42 66.1 30.61 57.59 30.61"/>
+          <polygon class="cls-5" points=".9 25.51 .9 59.53 54.19 59.53 54.19 25.51 .9 25.51"/>
+          <rect class="cls-6" x=".9" y="46.31" width="53.29" height="13.22"/>
+          <polygon class="cls-2" points=".9 25.51 .9 59.53 54.19 59.53 54.19 25.51 .9 25.51"/>
+          <rect class="cls-2" x="47.39" y="25.51" width="6.8" height="34.02"/>
+          <polygon class="cls-4" points="54.19 34.02 54.19 51.02 57.59 51.02 57.59 34.02 54.19 34.02"/>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+  <use width="86.31" height="85.04" xlink:href="#_新規シンボル_9"/>
+</svg>

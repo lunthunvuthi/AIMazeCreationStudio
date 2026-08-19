@@ -32,7 +32,8 @@
             "wallSeed": 3001
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-1",
@@ -81,7 +82,8 @@
             "wallSeed": 3003
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-2",
@@ -132,7 +134,8 @@
             "wallSeed": 3005
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-3",
@@ -161,7 +164,8 @@
             "wallSeed": 3006
           }
         }
-      ]
+      ],
+      "isBonus": true
     }
   ]
 }

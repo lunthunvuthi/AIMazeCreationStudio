@@ -6,8 +6,12 @@ implemented in the real frontend/store — this fixture stands in for what a
 finished dashboard would eventually hand to a renderer). pages[0] holds the
 1-star tutorial question (feeds the cover page's example maze per
 `pdf_export_spec.md` §4.1's cover-row note); pages[1:] are real question rows,
-mixing 1-question and 2-question rows and including the sheet's max star (5)
-so the laurel-wreath "top difficulty" logic has something to trigger on.
+mixing 1-question and 2-question rows and including the sheet's max star (5).
+
+`isBonus` (§4.4, added 2026-08-19) is a manual per-row flag, not computed from
+star rating — page-3 (star 5) is hardcoded `True` here purely to keep this
+fixture's laurel-wreath page the same one it always was, not because it's the
+max star.
 
 Seeds are hardcoded so the fixture is reproducible — re-running this script
 regenerates byte-identical mazes. Run from repo root:
@@ -62,10 +66,10 @@ def main():
         "month": 7,
         "week": 4,
         "pages": [
-            {"pageId": "cover", "questions": [questions[0]]},
-            {"pageId": "page-1", "questions": [questions[1], questions[2]]},
-            {"pageId": "page-2", "questions": [questions[3], questions[4]]},
-            {"pageId": "page-3", "questions": [questions[5]]},
+            {"pageId": "cover", "questions": [questions[0]], "isBonus": False},
+            {"pageId": "page-1", "questions": [questions[1], questions[2]], "isBonus": False},
+            {"pageId": "page-2", "questions": [questions[3], questions[4]], "isBonus": False},
+            {"pageId": "page-3", "questions": [questions[5]], "isBonus": True},
         ],
     }
 

@@ -4,9 +4,44 @@
 // the backend spike's reportlab drawing functions
 // (../../../spikes/pdf-renderer/backend/render_reportlab.py) shape-for-shape
 // so the two renderer-tech spikes are a fair comparison again.
+//
+// 2026-08-19 rework #3: the designer dropped real vector source files at
+// Web App/frontend/public/components/svg/ (see pdf_design_spec.md §12 for the
+// full per-file catalog). Start/Goal/pickaxe/laurel/both mascots below are now
+// that real artwork (served statically from /components/svg/... via Vite's
+// public dir) instead of hand-drawn approximations of the measured shapes.
+// BrokenFlagIcon/SparkleIcon/BreakCallout stay hand-drawn — no vector source
+// covers the cover's tutorial-only decorations.
 
 export const INK = '#111111'
 export const GRAY = '#9D9F9E'
+
+const SVG_BASE = '/components/svg'
+
+// Fits a real vector asset's own viewBox into a `size`-diameter box centered
+// on (cx, cy), preserving aspect ratio — the shared primitive every icon
+// below is built from.
+function VectorAsset({
+  file,
+  cx,
+  cy,
+  size,
+  vbW,
+  vbH,
+}: {
+  file: string
+  cx: number
+  cy: number
+  size: number
+  vbW: number
+  vbH: number
+}) {
+  const scale = size / Math.max(vbW, vbH)
+  const w = vbW * scale
+  const h = vbH * scale
+  const href = `${SVG_BASE}/${file}`
+  return <image href={href} xlinkHref={href} x={cx - w / 2} y={cy - h / 2} width={w} height={h} />
+}
 
 function starPoints(cx: number, cy: number, n: number, rOuter: number, rInner: number, phaseDeg = -90) {
   const points: string[] = []
@@ -18,45 +53,18 @@ function starPoints(cx: number, cy: number, n: number, rOuter: number, rInner: n
   return points.join(' ')
 }
 
-// pdf_design_spec.md §6.3 — walking stick figure, Start icon on every panel.
+// pdf_design_spec.md §6.3 / §12.1 — real vector, symbol-16.svg. Walking stick
+// figure, Start icon on every panel.
 export function StartIcon({ cx, cy, size }: { cx: number; cy: number; size: number }) {
-  const headR = size * 0.14
-  const headCy = cy - size * 0.28
-  const bodyTop = headCy + headR
-  const bodyBottom = cy + size * 0.22
-  return (
-    <g stroke={INK} strokeWidth={size * 0.05} fill="none" strokeLinecap="round">
-      <circle cx={cx} cy={headCy} r={headR} fill={INK} stroke="none" />
-      <line x1={cx} y1={bodyTop} x2={cx} y2={bodyBottom} />
-      <line x1={cx} y1={bodyTop + size * 0.08} x2={cx - size * 0.18} y2={bodyTop + size * 0.22} />
-      <line x1={cx} y1={bodyTop + size * 0.08} x2={cx + size * 0.18} y2={bodyTop + size * 0.22} />
-      <line x1={cx} y1={bodyBottom} x2={cx - size * 0.16} y2={cy + size * 0.4} />
-      <line x1={cx} y1={bodyBottom} x2={cx + size * 0.16} y2={cy + size * 0.4} />
-    </g>
-  )
+  return <VectorAsset file="symbol-16.svg" cx={cx} cy={cy} size={size} vbW={49.21} vbH={75.75} />
 }
 
-// pdf_design_spec.md §6.3 — pole + square frame + star. The ONLY goal icon
-// used on real question/answer-key panels (contrast with BrokenFlagIcon,
-// which is the cover's deliberately-"damaged" incorrect-example-only shape).
+// pdf_design_spec.md §6.3 / §12.1 — real vector, symbol-17.svg. Pole + square
+// frame + star. The ONLY goal icon used on real question/answer-key panels
+// (contrast with BrokenFlagIcon, which is the cover's deliberately-"damaged"
+// incorrect-example-only shape, still hand-drawn — no vector source for it).
 export function GoalIcon({ cx, cy, size }: { cx: number; cy: number; size: number }) {
-  const poleBottom = cy + size * 0.32
-  const poleTop = cy - size * 0.34
-  const ballR = size * 0.045
-  const frameSize = size * 0.44
-  const frameX = cx - size * 0.05
-  const frameY = poleTop
-  return (
-    <g>
-      <line x1={cx - size * 0.22} y1={poleBottom} x2={cx - size * 0.22} y2={poleTop} stroke={INK} strokeWidth={size * 0.05} />
-      <circle cx={cx - size * 0.22} cy={poleTop - ballR} r={ballR} fill={INK} />
-      <rect x={frameX} y={frameY} width={frameSize} height={frameSize} fill="none" stroke={INK} strokeWidth={size * 0.045} />
-      <polygon
-        points={starPoints(frameX + frameSize / 2, frameY + frameSize / 2, 5, frameSize * 0.34, frameSize * 0.15)}
-        fill={INK}
-      />
-    </g>
-  )
+  return <VectorAsset file="symbol-17.svg" cx={cx} cy={cy} size={size} vbW={122.02} vbH={122.02} />
 }
 
 // pdf_design_spec.md §5 — deliberately tilted/"broken" pennant, cover
@@ -70,46 +78,41 @@ export function BrokenFlagIcon({ cx, cy, size }: { cx: number; cy: number; size:
   )
 }
 
-// pdf_design_spec.md §6.4 — single pickaxe glyph, repeated per pickaxe_count
-// in the badge above each panel.
+// pdf_design_spec.md §6.4 / §12.1 — real vector, symbol-26.svg. Single
+// pickaxe glyph, repeated per pickaxe_count in the badge above each panel.
 export function PickaxeIcon({ cx, cy, size }: { cx: number; cy: number; size: number }) {
-  return (
-    <g stroke={INK} strokeLinecap="round" fill="none">
-      <line x1={cx - size * 0.28} y1={cy + size * 0.32} x2={cx + size * 0.3} y2={cy - size * 0.32} strokeWidth={size * 0.16} />
-      <line x1={cx - size * 0.4} y1={cy - size * 0.1} x2={cx - size * 0.08} y2={cy - size * 0.42} strokeWidth={size * 0.22} />
-    </g>
-  )
+  return <VectorAsset file="symbol-26.svg" cx={cx} cy={cy} size={size} vbW={28.86} vbH={30.04} />
 }
 
-// pdf_design_spec.md §7 — plain ink-black laurel sprigs flanking the page
-// number on the sheet's highest-star row(s). half_h keeps the whole sprig
-// within the number box's own vertical span.
-export function LaurelWreath({ cx, cy, halfH }: { cx: number; cy: number; halfH: number }) {
-  const leafW = halfH * 0.32
-  const leafH = halfH * 0.14
-  const sides = [-1, 1] as const
+// pdf_design_spec.md §7 / §12.1 — real vector, symbol-19.svg (the laurel
+// wreath with NO number baked in — symbol-18.svg's baked "5" is a worked
+// example, not a reusable template, see §7). This is what a "Bonus" page's
+// number box renders instead of the plain rectangle (level_dashboard_
+// pagination_spec.md §4.4) — the wreath plus the row's real page number,
+// positioned at roughly the same relative anchor symbol-18.svg's live text
+// sits at within its 57.96×47.08 viewBox. `width` is the wreath's rendered
+// width; height follows from its own aspect ratio.
+export function LaurelWreath({ cx, cy, width, number }: { cx: number; cy: number; width: number; number: number }) {
+  const vbW = 57.96
+  const vbH = 47.08
+  const scale = width / vbW
+  const height = vbH * scale
+  const x = cx - width / 2
+  const y = cy - height / 2
+  const href = `${SVG_BASE}/symbol-19.svg`
   return (
     <g>
-      {sides.map((side) => {
-        const stemX = cx + side * halfH * 0.75
-        const points = [0, 1, 2, 3].map((i) => ({ x: stemX, y: cy + halfH * 0.85 - i * halfH * 0.55 }))
-        return (
-          <g key={side}>
-            <polyline points={points.map((p) => `${p.x},${p.y}`).join(' ')} stroke={INK} strokeWidth={0.5} fill="none" />
-            {points.slice(1).map((p, i) => (
-              <ellipse
-                key={i}
-                cx={p.x + side * leafW * 0.3}
-                cy={p.y}
-                rx={leafW / 2}
-                ry={leafH / 2}
-                fill={INK}
-                transform={`rotate(${side * 35}, ${p.x + side * leafW * 0.3}, ${p.y})`}
-              />
-            ))}
-          </g>
-        )
-      })}
+      <image href={href} xlinkHref={href} x={x} y={y} width={width} height={height} />
+      <text
+        x={x + 19.83 * scale}
+        y={y + 26.42 * scale}
+        fontSize={30 * scale}
+        fontWeight="600"
+        fontFamily="'Futura', 'Century Gothic', sans-serif"
+        fill={INK}
+      >
+        {number}
+      </text>
     </g>
   )
 }
@@ -139,69 +142,19 @@ export function BreakCallout({ x, y, size }: { x: number; y: number; size: numbe
   )
 }
 
-// pdf_design_spec.md §4 — Hatenyan, bust/chest crop, title-banner pose. This
-// company's own confirmed-safe-to-reproduce IP (see pdf_export_spec.md §0),
-// simplified to flat vector shapes for this spike.
+// pdf_design_spec.md §4 / §12.1 — real vector, symbol.svg. Hatenyan,
+// bust/chest crop, title-banner pose. This company's own
+// confirmed-safe-to-reproduce IP (see pdf_export_spec.md §0) — already
+// embedded directly inside Front Cover.svg itself (§12.2); this component is
+// for anywhere the cover is built up programmatically instead.
 export function MascotBust({ cx, cy, size }: { cx: number; cy: number; size: number }) {
-  const headR = size * 0.42
-  const headCy = cy - size * 0.15
-  return (
-    <g>
-      <circle cx={cx} cy={headCy} r={headR} fill={INK} />
-      <polygon
-        points={`${cx - headR * 0.7},${headCy - headR} ${cx - headR * 1.15},${headCy - headR * 1.7} ${cx - headR * 0.15},${headCy - headR * 1.15}`}
-        fill={INK}
-      />
-      <polygon
-        points={`${cx + headR * 0.7},${headCy - headR} ${cx + headR * 1.15},${headCy - headR * 1.7} ${cx + headR * 0.15},${headCy - headR * 1.15}`}
-        fill={INK}
-      />
-      <rect x={cx - size * 0.42} y={cy - size * 0.15} width={size * 0.85} height={size * 0.55} rx={size * 0.17} fill={INK} />
-      {[-1, 1].map((side) => (
-        <g key={side}>
-          <circle cx={cx + side * headR * 0.42} cy={headCy - size * 0.18} r={headR * 0.22} fill="white" />
-          <circle cx={cx + side * headR * 0.42} cy={headCy - size * 0.18} r={headR * 0.1} fill={INK} />
-          <rect
-            x={cx + side * headR * 0.42 - headR * 0.13}
-            y={headCy - size * 0.18 - headR * 1.6 - headR * 0.026}
-            width={headR * 0.26}
-            height={headR * 0.052}
-            fill={INK}
-            transform={`rotate(${side * 12}, ${cx + side * headR * 0.42}, ${headCy - size * 0.18 - headR * 1.6})`}
-          />
-        </g>
-      ))}
-      <ellipse cx={cx} cy={headCy + headR * 0.1} rx={headR * 0.3} ry={headR * 0.15} fill="#f5f5f5" />
-      <line x1={cx - size * 0.3} y1={cy + size * 0.1} x2={cx - size * 0.55} y2={cy + size * 0.5} stroke={INK} strokeWidth={size * 0.05} />
-    </g>
-  )
+  return <VectorAsset file="symbol.svg" cx={cx} cy={cy} size={size} vbW={89.43} vbH={113.05} />
 }
 
-// pdf_design_spec.md §9 — Hatenyan, full-body pose with squinting ">"/"<"
-// eyes, bonus page footer.
+// pdf_design_spec.md §9 / §12.1 — real vector, symbol-22.svg. Full-body
+// Hatenyan — a different pose than the sample's squinting ">"/"<" eyes, but
+// approved 2026-08-19 as the interim placeholder for this slot regardless
+// (see §9's note — swap for a pose-accurate vector later if one shows up).
 export function MascotFull({ cx, cy, size }: { cx: number; cy: number; size: number }) {
-  const headR = size * 0.32
-  const headCy = cy - size * 0.05
-  return (
-    <g>
-      <ellipse cx={cx} cy={cy + size * 0.57} rx={size * 0.4} ry={size * 0.05} fill="#d9d9d9" />
-      <circle cx={cx} cy={headCy} r={headR} fill={INK} />
-      <polygon
-        points={`${cx - headR * 0.7},${headCy - headR * 0.9} ${cx - headR * 1.15},${headCy - headR * 1.6} ${cx - headR * 0.15},${headCy - headR * 1.1}`}
-        fill={INK}
-      />
-      <polygon
-        points={`${cx + headR * 0.7},${headCy - headR * 0.9} ${cx + headR * 1.15},${headCy - headR * 1.6} ${cx + headR * 0.15},${headCy - headR * 1.1}`}
-        fill={INK}
-      />
-      <rect x={cx - size * 0.3} y={cy - size * 0.05} width={size * 0.6} height={size * 0.45} rx={size * 0.15} fill={INK} />
-      <text x={cx - headR * 0.4} y={headCy + headR * 0.12} fontSize={headR * 0.55} fontWeight="bold" fill="white" textAnchor="middle">
-        &gt;
-      </text>
-      <text x={cx + headR * 0.4} y={headCy + headR * 0.12} fontSize={headR * 0.55} fontWeight="bold" fill="white" textAnchor="middle">
-        &lt;
-      </text>
-      <ellipse cx={cx} cy={headCy + headR * 0.2} rx={headR * 0.28} ry={headR * 0.15} fill="#f5f5f5" />
-    </g>
-  )
+  return <VectorAsset file="symbol-22.svg" cx={cx} cy={cy} size={size} vbW={85.04} vbH={85.04} />
 }

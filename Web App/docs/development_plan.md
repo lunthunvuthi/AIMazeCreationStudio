@@ -112,6 +112,18 @@ type MazeQuestion = {
 ```
 
 ### 4.3 `LevelProgress` (the file that gets saved/loaded)
+
+**Superseded 2026-08-19 — implemented 2026-08-19.** The shape below (`formatVersion: 1`,
+flat `questions[]`) is what shipped originally; `level_dashboard_pagination_spec.md` §2
+replaced `questions[]` with `pages: PageRow[]` (`formatVersion: 2`) so the Level
+Dashboard can author page/row structure directly, and added a per-row `isBonus` flag
+(§4.4) for the exported PDF's laurel-wreath marker. Both are implemented in
+`types/maze.ts`/`store/levelStore.ts`/`storage/fileAdapter.ts` (migration included) as
+of 2026-08-19 — the drag-and-drop reordering mechanics in that spec's §5 are **not**
+implemented yet (dashboard UI is a plain row list, no `@dnd-kit` integration). This
+snippet is kept for history; `level_dashboard_pagination_spec.md` §2 is the current
+shape.
+
 ```ts
 type LevelProgress = {
   formatVersion: 1;

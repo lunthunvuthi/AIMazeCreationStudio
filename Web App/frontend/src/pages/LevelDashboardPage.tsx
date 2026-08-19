@@ -4,23 +4,30 @@ import { useLevelStore } from '../store/levelStore'
 import QuestionSlotCard from '../components/QuestionSlotCard'
 import AddQuestionCard from '../components/AddQuestionCard'
 import { downloadLevelProgress } from '../storage/fileAdapter'
-import { MONTH_NAMES } from '../types/maze'
-import type { MazeQuestion } from '../types/maze'
+import { flattenPages, MONTH_NAMES } from '../types/maze'
+import type { MazeQuestion, PageRow } from '../types/maze'
 
+// level_dashboard_pagination_spec.md §3 — page-row list replacing the old
+// flat 3-column question grid. §5's drag-and-drop reordering (swap/move
+// questions between rows) is NOT implemented yet — rows are otherwise fully
+// functional (add/remove/re-rate/Bonus toggle), just not draggable yet.
 export default function LevelDashboardPage() {
   const { mazeTypeId } = useParams<{ mazeTypeId: string }>()
   const mazeType = mazeTypeId ? getMazeType(mazeTypeId) : undefined
   const current = useLevelStore((s) => s.current)
   const updateSheetInfo = useLevelStore((s) => s.updateSheetInfo)
-  const addQuestion = useLevelStore((s) => s.addQuestion)
+  const addQuestionToRow = useLevelStore((s) => s.addQuestionToRow)
+  const addNewPage = useLevelStore((s) => s.addNewPage)
+  const toggleRowBonus = useLevelStore((s) => s.toggleRowBonus)
   const setQuestionStar = useLevelStore((s) => s.setQuestionStar)
   const removeQuestion = useLevelStore((s) => s.removeQuestion)
 
   if (!mazeType) return <Navigate to="/" replace />
   if (!current || current.mazeType !== mazeType.id) return <Navigate to={`/${mazeType.id}/new`} replace />
 
-  const completeCount = current.questions.filter((q) => q.status === 'complete').length
-  const allComplete = completeCount === current.questions.length
+  const allQuestions = flattenPages(current.pages)
+  const completeCount = allQuestions.filter((q) => q.status === 'complete').length
+  const allComplete = completeCount === allQuestions.length
   const starOptions = Object.keys(mazeType.starParams)
     .map(Number)
     .sort((a, b) => a - b)
@@ -43,6 +50,9 @@ export default function LevelDashboardPage() {
     removeQuestion(question.question_id)
   }
 
+  const coverRow = current.pages[0] as PageRow | undefined
+  const questionRows = current.pages.slice(1)
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <Link to={`/${mazeType.id}`} className="text-sm text-indigo-600 hover:underline">
@@ -53,7 +63,7 @@ export default function LevelDashboardPage() {
         <div>
           <h1 className="text-3xl font-semibold capitalize text-slate-900">{current.level} level</h1>
           <p className="mt-1 text-sm text-slate-600">
-            {completeCount} / {current.questions.length} complete
+            {completeCount} / {allQuestions.length} complete
           </p>
         </div>
         <div className="flex gap-2">
@@ -122,18 +132,68 @@ export default function LevelDashboardPage() {
         </label>
       </div>
 
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {current.questions.map((question) => (
-          <QuestionSlotCard
-            key={question.question_id}
-            mazeTypeId={mazeType.id}
-            question={question}
-            starOptions={starOptions}
-            onChangeStar={(star) => handleChangeStar(question, star)}
-            onRemove={() => handleRemove(question)}
-          />
+      <div className="mt-8 flex flex-col gap-4">
+        {/* Row 0 — cover/tutorial, locked (§4.1): no drag, no remove, no
+            second-question slot, no page number/Bonus toggle. */}
+        {coverRow && (
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+            <span className="mb-3 inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+              Cover / Tutorial
+            </span>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <QuestionSlotCard
+                mazeTypeId={mazeType.id}
+                question={coverRow.questions[0]}
+                starOptions={starOptions}
+                onChangeStar={(star) => handleChangeStar(coverRow.questions[0], star)}
+                hideRemove
+              />
+            </div>
+          </div>
+        )}
+
+        {questionRows.map((row, i) => (
+          <div key={row.pageId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600">
+                Page {i + 1}
+              </span>
+              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={row.isBonus}
+                  onChange={() => toggleRowBonus(row.pageId)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+                />
+                Bonus
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {row.questions.map((question) => (
+                <QuestionSlotCard
+                  key={question.question_id}
+                  mazeTypeId={mazeType.id}
+                  question={question}
+                  starOptions={starOptions}
+                  onChangeStar={(star) => handleChangeStar(question, star)}
+                  onRemove={() => handleRemove(question)}
+                />
+              ))}
+              {row.questions.length === 1 && (
+                <AddQuestionCard starOptions={starOptions} onAdd={(star) => addQuestionToRow(row.pageId, star)} />
+              )}
+            </div>
+          </div>
         ))}
-        <AddQuestionCard starOptions={starOptions} onAdd={addQuestion} />
+
+        <button
+          type="button"
+          onClick={() => addNewPage(3)}
+          className="flex items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 p-4 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-500"
+        >
+          <span className="text-xl leading-none">+</span>
+          <span className="text-sm font-medium">Add new page</span>
+        </button>
       </div>
     </main>
   )

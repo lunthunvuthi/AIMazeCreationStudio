@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="page" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 42.52 42.52">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #999;
+        stroke-linejoin: round;
+        stroke-width: 4.5px;
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-3 {
+        fill: #999;
+      }
+
+      .cls-4 {
+        fill: #333;
+      }
+    </style>
+    <symbol id="_新規シンボル_53" data-name="新規シンボル 53" viewBox="0 0 42.52 42.52">
+      <g>
+        <g>
+          <g>
+            <path class="cls-4" d="M10.63,41.52c-5.31,0-9.63-4.32-9.63-9.63v-3.13H41.52v3.13c0,5.31-4.32,9.63-9.63,9.63H10.63Z"/>
+            <path d="M40.52,29.76v2.13c0,4.76-3.87,8.63-8.63,8.63H10.63c-4.76,0-8.63-3.87-8.63-8.63v-2.13H40.52m2-2H0v4.13C0,37.76,4.76,42.52,10.63,42.52H31.89c5.87,0,10.63-4.76,10.63-10.63v-4.13h0Z"/>
+          </g>
+          <g>
+            <path class="cls-4" d="M1,13.76v-3.13C1,5.32,5.32,1,10.63,1H31.89c5.31,0,9.63,4.32,9.63,9.63v3.13H1Z"/>
+            <path d="M31.89,2c4.76,0,8.63,3.87,8.63,8.63v2.13H2v-2.13C2,5.87,5.87,2,10.63,2H31.89m0-2H10.63C4.76,0,0,4.76,0,10.63v4.13H42.52v-4.13c0-5.87-4.76-10.63-10.63-10.63h0Z"/>
+          </g>
+        </g>
+        <rect class="cls-2" y="14.76" width="42.52" height="13"/>
+        <g>
+          <polyline class="cls-1" points="5.37 21.26 21.32 21.26 29.08 21.26"/>
+          <polygon class="cls-3" points="27.44 26.87 37.15 21.26 27.44 15.65 27.44 26.87"/>
+        </g>
+      </g>
+    </symbol>
+  </defs>
+  <use width="42.52" height="42.52" xlink:href="#_新規シンボル_53"/>
+</svg>

@@ -37,7 +37,8 @@ export const sampleFixture: SpikeFixture = {
             "wallSeed": 3001
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-1",
@@ -86,7 +87,8 @@ export const sampleFixture: SpikeFixture = {
             "wallSeed": 3003
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-2",
@@ -137,7 +139,8 @@ export const sampleFixture: SpikeFixture = {
             "wallSeed": 3005
           }
         }
-      ]
+      ],
+      "isBonus": false
     },
     {
       "pageId": "page-3",
@@ -166,7 +169,8 @@ export const sampleFixture: SpikeFixture = {
             "wallSeed": 3006
           }
         }
-      ]
+      ],
+      "isBonus": true
     }
   ]
 }

@@ -7,6 +7,10 @@ import type { MazeQuestion } from '../types/maze'
 export interface SpikePageRow {
   pageId: string
   questions: MazeQuestion[]
+  // level_dashboard_pagination_spec.md §4.4 — manual "Bonus" toggle, added
+  // 2026-08-19. Replaces the earlier plan to compute the laurel-wreath
+  // marker from "does this row hold the sheet's highest star" automatically.
+  isBonus: boolean
 }
 
 export interface SpikeFixture {

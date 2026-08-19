@@ -6,6 +6,7 @@ import { generateMaze, type GenerateResult } from '../api/mazeApi'
 import { hydrateDraftFromMazeData } from '../registry/pickaxe/wizardMaze'
 import PickaxeGrid from '../registry/pickaxe/PickaxeGrid'
 import RandomizeProgressModal, { type RandomizeReplayFrom } from '../components/RandomizeProgressModal'
+import { flattenPages } from '../types/maze'
 
 interface ActiveRandomize {
   replayFrom: RandomizeReplayFrom
@@ -27,7 +28,7 @@ export default function RandomizeResultPage() {
   const completeRandomizedQuestion = useLevelStore((s) => s.completeRandomizedQuestion)
   const navigate = useNavigate()
 
-  const question = current?.questions.find((q) => q.question_id === questionId)
+  const question = current ? flattenPages(current.pages).find((q) => q.question_id === questionId) : undefined
 
   const [activeRandomize, setActiveRandomize] = useState<ActiveRandomize | null>(() =>
     question && !question.maze

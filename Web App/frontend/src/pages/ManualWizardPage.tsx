@@ -11,7 +11,7 @@ import {
   serializeToMazeData,
 } from '../registry/pickaxe/wizardMaze'
 import WizardStepper, { type WizardStepStatus } from '../components/WizardStepper'
-import type { ValidateResponse, WizardDraft } from '../types/maze'
+import { flattenPages, type ValidateResponse, type WizardDraft } from '../types/maze'
 
 // The maze-type-agnostic wizard orchestrator (§6.7): owns the in-progress
 // draft, drives Back/Next between `mazeType.WizardSteps`, and wires the
@@ -24,7 +24,7 @@ export default function ManualWizardPage() {
   const completeQuestion = useLevelStore((s) => s.completeQuestion)
   const navigate = useNavigate()
 
-  const question = current?.questions.find((q) => q.question_id === questionId)
+  const question = current ? flattenPages(current.pages).find((q) => q.question_id === questionId) : undefined
 
   const [stepIndex, setStepIndex] = useState(0)
   const [maxReachedStep, setMaxReachedStep] = useState(0)

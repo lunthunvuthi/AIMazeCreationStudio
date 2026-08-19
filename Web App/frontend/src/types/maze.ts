@@ -47,18 +47,42 @@ export interface MazeQuestion {
   }
 }
 
+// level_dashboard_pagination_spec.md §2.1 — one row of the exported PDF
+// (1-2 questions; always 1 for pages[0], the locked cover/tutorial row).
+// `isBonus` (§4.4, added 2026-08-19) is a manual per-row flag controlling
+// whether that page's number box renders the laurel-wreath design
+// (pdf_design_spec.md §7) instead of the plain rectangle — always false for
+// pages[0], which has no page-number box at all.
+export interface PageRow {
+  pageId: string
+  questions: MazeQuestion[]
+  isBonus: boolean
+}
+
 // §4.3 — the file that gets saved/loaded.
+// formatVersion 2 (level_dashboard_pagination_spec.md §2.2, 2026-08-19)
+// replaced a flat `questions[]` with `pages: PageRow[]` so the Level
+// Dashboard authors page/row structure directly rather than a renderer
+// guessing it after the fact — see storage/fileAdapter.ts for the
+// formatVersion 1 migration.
 export interface LevelProgress {
-  formatVersion: 1
+  formatVersion: 2
   mazeType: string // registry key, see §5
   level: LevelName
   sheetName: string // user-editable label, e.g. "Kinder Week 2"
   year: number
   month: number // 1-12, see MONTH_NAMES
   week: number
-  questions: MazeQuestion[]
+  pages: PageRow[]
   createdAt: string
   updatedAt: string
+}
+
+// Flattens pages[] back into question order — for anything that only cares
+// about "all questions on this sheet" (completion counts, occurrence
+// numbering, question lookup by id) rather than page/row structure.
+export function flattenPages(pages: PageRow[]): MazeQuestion[] {
+  return pages.flatMap((page) => page.questions)
 }
 
 export type CellKind = 'normal' | 'start' | 'goal'

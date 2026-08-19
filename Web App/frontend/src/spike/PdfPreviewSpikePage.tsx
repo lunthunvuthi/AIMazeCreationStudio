@@ -25,14 +25,24 @@ import { sampleFixture } from './sampleFixture'
 // `--preview-question` flag — a new maze type's question design can be
 // built and checked in isolation before it's ever arranged onto a sheet.
 
-function PageNumberBadge({ number, isTopDifficulty }: { number: number; isTopDifficulty: boolean }) {
+// level_dashboard_pagination_spec.md §4.4 — `isBonus` is a manual per-row
+// flag now, not computed from star rating (pdf_design_spec.md §7's laurel
+// wreath replaces the plain box entirely on a Bonus row, it doesn't overlay
+// on top of it).
+function PageNumberBadge({ number, isBonus }: { number: number; isBonus: boolean }) {
+  if (isBonus) {
+    return (
+      <svg viewBox="0 0 48 48" className="mb-4 block h-12 w-12">
+        <LaurelWreath cx={24} cy={24} width={40} number={number} />
+      </svg>
+    )
+  }
   return (
     <svg viewBox="0 0 48 48" className="mb-4 block h-12 w-12">
       <rect x={2} y={2} width={44} height={44} fill="white" stroke={INK} strokeWidth={0.8} />
       <text x={24} y={31} textAnchor="middle" fontSize={20} fontWeight="bold" fill={INK}>
         {number}
       </text>
-      {isTopDifficulty && <LaurelWreath cx={24} cy={24} halfH={16} />}
     </svg>
   )
 }
@@ -45,10 +55,6 @@ export default function PdfPreviewSpikePage() {
   const coverQuestion = fixture.pages[0].questions[0]
   const questionPages = fixture.pages.slice(1)
   const allQuestions = useMemo(() => fixture.pages.flatMap((p) => p.questions), [fixture])
-  const maxStar = useMemo(
-    () => Math.max(...questionPages.flatMap((p) => p.questions.map((q) => q.difficulty_star))),
-    [questionPages],
-  )
 
   const toolbar = (
     <div className="no-print mb-6 flex flex-wrap items-center justify-center gap-4">
@@ -197,11 +203,10 @@ export default function PdfPreviewSpikePage() {
           renders internally (see this spike's README for why that matters). */}
       {questionPages.map((page, i) => {
         const pageNumber = i + 1
-        const isTop = page.questions.some((q) => q.difficulty_star === maxStar)
         const size = page.questions.length === 1 ? 'large' : 'small'
         return (
           <div key={page.pageId} className="print-page min-h-[277mm] w-[210mm] bg-white p-[10mm]">
-            <PageNumberBadge number={pageNumber} isTopDifficulty={isTop} />
+            <PageNumberBadge number={pageNumber} isBonus={page.isBonus} />
             <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-10">
               {page.questions.map((question) => (
                 <QuestionPanel key={question.question_id} mazeType={fixture.mazeType} question={question} size={size} answerKey={answerKey} />

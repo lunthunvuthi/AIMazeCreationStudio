@@ -23,6 +23,15 @@ where the two used to disagree (this doc's original draft was visual-estimate-on
 got the grid style, colors, and per-page panel layout wrong — see `pdf_design_spec.md`
 §6.2/§7 for what changed and why).
 
+**2026-08-19 — real vector assets superseded several visual-estimate items:** a
+designer-provided folder of vector source files (`Web App/frontend/public/components/svg/`)
+arrived and was confirmed role-by-role — see `pdf_design_spec.md` §12 for the full
+catalog and the inline "Superseded" notes throughout that doc. In particular: the
+cover page now has a literal full-A4 vector template (`Front Cover.svg`) rather than
+needing to be reconstructed purely from the raster sample's measurements (§3 below), and
+the Start/Goal/pickaxe/laurel icons are now exact vectors rather than shape-matched
+approximations.
+
 ---
 
 ## 0. Source sample: what it is and isn't
@@ -104,6 +113,16 @@ Static content, not derived from maze data except the header fields:
   must **not** leak into the real per-question panels (§4.2) or the answer key (§6).
 - **Decorative footer graphic:** purely cosmetic (muted maze/road motif), no data.
 
+**Build-from-template note (2026-08-19):** `Front Cover.svg` (`pdf_design_spec.md`
+§12.2) already has the logo, the three header text fields (as live text, positioned and
+in their real fonts), the title banner + mascot, the outer border, and the Direction
+box's container/pill shell all built and positioned. What it does **not** have — and
+what actually needs generating per-export — is the "Let's do it" title text, the
+instruction sentence, and both example maze panels inside the Direction box. That's the
+concrete meaning of "filling in the tutorial question" on this page: the shell is
+static and reusable across every export; only that tutorial content is data/maze-type
+driven.
+
 ---
 
 ## 4. Question Pages
@@ -122,10 +141,17 @@ disagreeing with the dashboard's own row boundaries.
 - Each page's numbered box shows the **1-based index of that `PageRow` within
   `pages[]`** (matches the sample: boxes 1-6 across 6 pages) — the cover row (index 0)
   is unnumbered/untitled per §3, numbering starts at the first question row.
-- **Confirmed 2026-08-19** — the sample marks its last 2 pages with a laurel-wreath icon
-  next to the number. Interpreted as "this row's questions include the sheet's highest
-  star rating" (computed per-row from that row's own `questions[]`, not a fixed page
-  position), so it still makes sense once rows have been freely reordered.
+- **Laurel-wreath / "Bonus" marker — superseded 2026-08-19, now manual:** the sample
+  marks its last 2 pages with a laurel-wreath icon next to the number, originally
+  interpreted (2026-08-19, earlier same day) as "this row's questions include the
+  sheet's highest star rating," computed automatically per row. **Replaced same day**
+  by an explicit **"Bonus" toggle** the user sets per page row on the Level Dashboard —
+  see `level_dashboard_pagination_spec.md` §4.4 for the data-model/UI change. Manual
+  control was chosen over the star-rating heuristic because the user wants direct
+  authorship over which pages read as "bonus," not an inferred rule that could surprise
+  them after reordering rows. When the toggle is on, the page-number box uses the laurel
+  design (`pdf_design_spec.md` §7, §12.1's `symbol-19.svg`); off, it's the plain
+  hairline-bordered rectangle (`pdf_design_spec.md` §7).
 
 ### 4.2 Per-maze panel
 
@@ -149,7 +175,9 @@ disagreeing with the dashboard's own row boundaries.
   letters that `development_plan.md` §7 specifies for the in-app simple renderer.
   **Confirmed 2026-08-19** — print export uses these friendlier icons (Kinder/Primary
   audience) while the in-app editor keeps plain letters (§7, unchanged, since that's
-  about fast in-app iteration, not final print quality).
+  about fast in-app iteration, not final print quality). **Sourced from real vectors as
+  of 2026-08-19** — `symbol-16.svg` (Start) / `symbol-17.svg` (Goal), see
+  `pdf_design_spec.md` §12.1.
 - No wall-count/pickaxe-count text is shown *inside* the grid — only the badge above it.
 - **Panel count per page:** where a page holds 2 questions, the sample stacks the two
   panels **vertically** (one above the other, each with its own badge), not
@@ -207,3 +235,10 @@ sample, two distinct files), so a teacher can hand out only the question sheet.
    spike both before committing** — no winner picked yet, next step is to build a small
    throwaway version of each and compare. This blocks the dashboard's **Preview** button
    (`level_dashboard_pagination_spec.md`) as well as final Export PDF.
+   **2026-08-19 update:** the real vector assets (`pdf_design_spec.md` §12) are plain
+   SVG — trivial to `<img>`/inline into the frontend or hybrid spike's DOM, more work for
+   `reportlab`'s canvas API (needs `svglib` or manual path-drawing to consume them). This
+   doesn't decide the renderer-tech question on its own, but it's a real new data point
+   favoring frontend/hybrid that didn't exist when the three spikes were built — worth
+   weighing alongside the spikes' already-documented trade-offs
+   (`Web App/spikes/pdf-renderer/README.md`) before making the final call.

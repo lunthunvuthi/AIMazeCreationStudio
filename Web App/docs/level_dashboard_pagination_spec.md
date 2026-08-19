@@ -12,8 +12,16 @@ codebase (`types/maze.ts`, `levelStore.ts`, `LevelDashboardPage.tsx`). As with
 `development_plan.md` and `pdf_export_spec.md`, anything marked **(ASSUMPTION)** was
 inferred and should be corrected if wrong. Three forks were confirmed directly with the
 project owner before writing this (§5.1, §6.2, §4.3) — noted inline as **(CONFIRMED)**.
+A fourth, §4.4's manual "Bonus" toggle, was added the same day from a later, separate
+instruction from the project owner (also directly confirmed, not inferred).
 
-**Status:** spec only, no code written yet.
+**Status (updated 2026-08-19):** the data model (§2: `PageRow`, `isBonus`, `formatVersion: 2`,
+the old-file migration) and a minimal row-list dashboard UI (§3/§4: cover row locked,
+in-row "+ Add question", "+ Add new page", the Bonus toggle) are **implemented**, in
+`types/maze.ts`/`store/levelStore.ts`/`storage/fileAdapter.ts`/`LevelDashboardPage.tsx`.
+**Not implemented:** §5's drag-and-drop (swap/move questions between rows via
+`@dnd-kit`) and §6's Preview/Download buttons — today's Save Progress/Export JSON stay
+as they were. This was a deliberate scope cut for this pass, not an oversight.
 
 ---
 
@@ -36,8 +44,14 @@ data-model change it requires.
 export interface PageRow {
   pageId: string           // stable id, independent of position — for React keys & DnD identity
   questions: MazeQuestion[] // length 1 for the cover row (pages[0]); 1-2 for every other row
+  isBonus: boolean          // §4.4 — manual "Bonus" flag; always false for pages[0] (the cover row)
 }
 ```
+
+`isBonus` is new as of 2026-08-19 (§4.4) — see that section for the UI and rendering
+rule. It **replaces** `pdf_export_spec.md` §4.1's original plan to compute the
+laurel-wreath marker automatically from "does this row contain the sheet's highest star
+rating" — that auto-computed rule is now superseded by this explicit per-row flag.
 
 ### 2.2 `LevelProgress` (§4.3 of `development_plan.md` — changed)
 
@@ -71,7 +85,9 @@ and migrate on load:
 2. Its first question becomes `pages[0]` alone (the cover/tutorial row).
 3. Pack the remaining questions into rows of 2, in their existing array order, as
    `pages[1..]`.
-4. Re-save under `formatVersion: 2` the next time the user exports.
+4. Every migrated row gets `isBonus: false` (§4.4) — there's no prior data to infer it
+   from, and the user can toggle it on per row immediately after loading.
+5. Re-save under `formatVersion: 2` the next time the user exports.
 
 **(ASSUMPTION)** — step 2 assumes `questions[0]` is the tutorial question (true today,
 since `startNewLevel` always builds the 1★ tutorial first per `development_plan.md`
@@ -99,10 +115,11 @@ page rows**, each rendered full-width, in `pages[]` order:
   Rendered from `pages[0].questions[0]` using the existing `QuestionSlotCard`.
 - **Rows 1..N:** each shows 1 or 2 `QuestionSlotCard`s side-by-side (or stacked on
   narrow viewports), a small "Page N" label (N = the row's 1-based index within
-  `pages[]`, matching `pdf_export_spec.md` §4.1's page numbering), and — only when the
-  row currently holds exactly 1 question — a trailing **"+ Add question"** slot (reuses
-  today's `AddQuestionCard` star-picker dropdown, **(CONFIRMED)** unchanged from its
-  current behavior — this is only about *where* it's rendered, inside the row instead of
+  `pages[]`, matching `pdf_export_spec.md` §4.1's page numbering) with a **"Bonus"
+  toggle right next to it** (§4.4, new 2026-08-19), and — only when the row currently
+  holds exactly 1 question — a trailing **"+ Add question"** slot (reuses today's
+  `AddQuestionCard` star-picker dropdown, **(CONFIRMED)** unchanged from its current
+  behavior — this is only about *where* it's rendered, inside the row instead of
   trailing the whole grid).
 - **"+ Add new page"** — a single control after the last row (not inside any row).
   Clicking it appends a new `PageRow` with one freshly-built `empty` question at
@@ -138,6 +155,28 @@ elsewhere) is removed from `pages[]` immediately — no empty placeholder row is
 rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
 separate page-number field), removing a row automatically renumbers everything after it
 — no explicit reindexing step needed.
+
+### 4.4 "Bonus" toggle per row (added 2026-08-19, from the project owner's description)
+
+Each row other than row 0 gets a **"Bonus" trigger** — a small toggle/checkbox next to
+that row's "Page N" label (§3) — bound to `PageRow.isBonus` (§2.1).
+
+- **Off (default):** the exported page's page-number box renders as the plain
+  hairline-bordered rectangle (`pdf_design_spec.md` §7).
+- **On:** the page-number box renders with the **laurel design** instead —
+  `pdf_design_spec.md` §7's laurel wreath (`symbol-19.svg`, `pdf_design_spec.md` §12.1)
+  wrapped around that row's number.
+- Row 0 (the cover row) never shows this toggle and `isBonus` is always `false` for it —
+  it has no page-number box at all (§4.1's numbering starts at the first question row,
+  matching `pdf_export_spec.md` §4.1).
+
+**This replaces the previous plan** (`pdf_export_spec.md` §4.1, `pdf_design_spec.md`
+§7) to compute the laurel marker automatically from "does this row contain the sheet's
+highest star rating." That heuristic is now dropped in favor of direct manual control —
+the user decides which pages read as "Bonus," rather than the renderer inferring it,
+which also sidesteps any surprise re-labeling when rows get reordered via drag-and-drop
+(§5). Multiple rows can be marked Bonus on the same sheet; there's no cap or mutual
+exclusivity rule.
 
 ---
 
@@ -227,11 +266,11 @@ Recommend **not** blocking this dashboard redesign on that decision:
 
 ## 7. Files Likely Touched (for implementation planning, not yet started)
 
-- `Web App/frontend/src/types/maze.ts` — add `PageRow`, change `LevelProgress.questions`
-  → `pages`, bump `formatVersion`.
+- `Web App/frontend/src/types/maze.ts` — add `PageRow` (incl. `isBonus`, §4.4), change
+  `LevelProgress.questions` → `pages`, bump `formatVersion`.
 - `Web App/frontend/src/store/levelStore.ts` — restructure all actions around
   `pages[]`; add swap/move actions for §5's three gestures; add row auto-delete (§4.3);
-  add preview-snapshot state (§6.2).
+  add a toggle action for `isBonus` (§4.4); add preview-snapshot state (§6.2).
 - `Web App/frontend/src/storage/fileAdapter.ts` — `formatVersion: 1` → `2` migration
   (§2.3); update filename stamping if it referenced `questions.length` anywhere.
 - `Web App/frontend/src/pages/LevelDashboardPage.tsx` — replace the grid with the
@@ -249,8 +288,12 @@ Recommend **not** blocking this dashboard redesign on that decision:
    just final Export PDF. **Decided 2026-08-19: spike both** (backend Python vs. frontend
    browser-print/CSS) before committing — no winner picked yet.
 2. ~~DnD library pick~~ — **resolved 2026-08-19**: `@dnd-kit/core` (§5.2).
-3. Everything else in this doc was either directly confirmed with the project owner
-   (§4.1, §4.3/§5.1, §6.2, and keeping the in-row add picker per §3) or is a low-risk
-   inferred default (migration grouping §2.3, 3-star new-page default already stated by
-   the project owner, Preview not gated on completeness §6.1) — flagged inline as
-   **(ASSUMPTION)** rather than blocking on it.
+3. ~~Laurel-wreath / "top difficulty" marker mechanism~~ — **resolved 2026-08-19**:
+   dropped the auto-computed-from-star-rating rule in favor of a manual per-row
+   "Bonus" toggle (§4.4), driven directly by the project owner's description of how they
+   want this to work, not an inference from `questions[]`.
+4. Everything else in this doc was either directly confirmed with the project owner
+   (§4.1, §4.3/§5.1, §6.2, §4.4, and keeping the in-row add picker per §3) or is a
+   low-risk inferred default (migration grouping §2.3, 3-star new-page default already
+   stated by the project owner, Preview not gated on completeness §6.1) — flagged
+   inline as **(ASSUMPTION)** rather than blocking on it.
