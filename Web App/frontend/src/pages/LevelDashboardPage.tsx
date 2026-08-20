@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getMazeType } from '../registry/mazeTypes'
 import { useLevelStore } from '../store/levelStore'
 import QuestionSlotCard from '../components/QuestionSlotCard'
 import AddQuestionCard from '../components/AddQuestionCard'
-import { downloadLevelProgress } from '../storage/fileAdapter'
+import { buildExportFilename, downloadBlob, downloadLevelProgress } from '../storage/fileAdapter'
+import { renderPdf } from '../api/pdfApi'
 import { flattenPages, MONTH_NAMES } from '../types/maze'
 import type { MazeQuestion, PageRow } from '../types/maze'
 
@@ -21,6 +23,10 @@ export default function LevelDashboardPage() {
   const toggleRowBonus = useLevelStore((s) => s.toggleRowBonus)
   const setQuestionStar = useLevelStore((s) => s.setQuestionStar)
   const removeQuestion = useLevelStore((s) => s.removeQuestion)
+
+  const [isRendering, setIsRendering] = useState(false)
+  const [previewedSnapshot, setPreviewedSnapshot] = useState<string | null>(null)
+  const [previewedBlob, setPreviewedBlob] = useState<Blob | null>(null)
 
   if (!mazeType) return <Navigate to="/" replace />
   if (!current || current.mazeType !== mazeType.id) return <Navigate to={`/${mazeType.id}/new`} replace />
@@ -50,6 +56,29 @@ export default function LevelDashboardPage() {
     removeQuestion(question.question_id)
   }
 
+  const currentSnapshot = JSON.stringify(current)
+  const canDownload = allComplete && previewedBlob !== null && previewedSnapshot === currentSnapshot
+
+  async function handlePreview() {
+    setIsRendering(true)
+    try {
+      const blob = await renderPdf(current)
+      setPreviewedSnapshot(currentSnapshot)
+      setPreviewedBlob(blob)
+      window.open(URL.createObjectURL(blob), '_blank')
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'PDF preview failed.')
+    } finally {
+      setIsRendering(false)
+    }
+  }
+
+  function handleDownload() {
+    if (!previewedBlob) return
+    downloadBlob(previewedBlob, buildExportFilename(current, 'pdf'))
+    downloadLevelProgress(current)
+  }
+
   const coverRow = current.pages[0] as PageRow | undefined
   const questionRows = current.pages.slice(1)
 
@@ -76,12 +105,26 @@ export default function LevelDashboardPage() {
           </button>
           <button
             type="button"
-            onClick={() => downloadLevelProgress(current)}
-            disabled={!allComplete}
-            title={allComplete ? undefined : 'Complete every question first'}
+            onClick={handlePreview}
+            disabled={isRendering}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-600 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:text-slate-400"
           >
-            Export JSON
+            {isRendering ? 'Rendering…' : 'Preview'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!canDownload}
+            title={
+              !allComplete
+                ? 'Complete every question first'
+                : !canDownload
+                  ? 'Preview the sheet before downloading'
+                  : undefined
+            }
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-600 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:text-slate-400"
+          >
+            Download
           </button>
         </div>
       </div>

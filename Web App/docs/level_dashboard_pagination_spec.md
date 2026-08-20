@@ -256,12 +256,17 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
 
 - **Phase A (done):** the `pages[]` data model, row-based dashboard UI, and Bonus toggle
   are implemented (§4.4). Drag-and-drop from §5 is deliberately **not** built yet
-  (scope cut, see `pdf_export_spec.md`'s "Done" history / `MEMORY.md`). Preview/Download
-  buttons themselves are also not built yet — today's Save Progress/Export JSON stand in.
-- **Phase B (next, now unblocked):** wire real `LevelProgress` data into the hybrid
-  renderer (replacing its hardcoded fixture) and build the actual Preview/Download
-  buttons calling it, producing a true one-click PDF. JSON download doesn't need the
-  renderer and could ship independently of PDF readiness if useful as an interim step.
+  (scope cut, see `pdf_export_spec.md`'s "Done" history / `MEMORY.md`).
+- **Phase B (done, 2026-08-20):** real `LevelProgress` data is wired into the hybrid
+  renderer, and the actual **Preview**/**Download** buttons in `LevelDashboardPage.tsx`
+  replace the old Save Progress/Export JSON pair per §6.1 — backed by a new
+  `Web App/pdf-service/` Node/Express service (see `pdf_export_spec.md` §7 item 5's
+  2026-08-20 update for the architecture). Preview renders regardless of completion
+  and caches the resulting blob; Download reuses that cached blob (no re-render) once
+  §6.2's `previewedSnapshot === JSON.stringify(current)` gate passes, and also
+  downloads the JSON via the existing `downloadLevelProgress`. Verified end-to-end via
+  the real Modify-Maze-load → Dashboard → Preview → Download flow with a fully-complete
+  sample sheet (5-page, 190KB PDF).
 
 ---
 

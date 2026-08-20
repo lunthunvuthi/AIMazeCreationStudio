@@ -1,0 +1,14 @@
+{
+  "name": "pdf-service",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Long-running Express service that drives headless Playwright against the frontend's /spike/pdf-preview route to produce real downloadable PDFs for the Level Dashboard's Preview/Download buttons.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "playwright": "^1.62.1"
+  }
+}

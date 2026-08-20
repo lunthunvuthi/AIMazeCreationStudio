@@ -10,18 +10,24 @@ import { packQuestionsIntoPages } from '../store/levelStore'
 
 const LEVEL_NAMES: LevelName[] = ['kinder', 'primary', 'advanced']
 
-export function downloadLevelProgress(progress: LevelProgress): void {
+export function buildExportFilename(progress: LevelProgress, ext: string): string {
   const stamp = progress.updatedAt.replace(/[:.]/g, '-')
   const monthStr = String(progress.month).padStart(2, '0')
-  const filename = `${progress.mazeType}-${progress.level}-${progress.year}-${monthStr}-week${progress.week}-${stamp}.json`
+  return `${progress.mazeType}-${progress.level}-${progress.year}-${monthStr}-week${progress.week}-${stamp}.${ext}`
+}
 
-  const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' })
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+export function downloadLevelProgress(progress: LevelProgress): void {
+  const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' })
+  downloadBlob(blob, buildExportFilename(progress, 'json'))
 }
 
 // level_dashboard_pagination_spec.md §2.3 — a formatVersion-1 save file's

@@ -250,8 +250,16 @@ sample, two distinct files), so a teacher can hand out only the question sheet.
    the headless page via `page.addInitScript` since `LevelProgress` is a structural
    superset of the spike's fixture type) — see
    `Web App/spikes/pdf-renderer/README.md`'s "Renderer-tech decision + wiring real data
-   in" section. **Still not done:** the actual Preview/Download buttons in
-   `LevelDashboardPage.tsx` that would serialize `current` and drive this script/a real
-   backend service (how the browser triggers server-side Playwright is a separate
-   architectural decision, not yet made), and building the cover page from the real
-   `Front Cover.svg` template (§3, §12.2) instead of the current approximated markup.
+   in" section.
+   **2026-08-20 update:** the browser-triggers-server-side-Playwright architectural
+   question is resolved — a standalone Node/Express service, `Web App/pdf-service/`
+   (own `package.json`, not part of the frontend's dependency graph), reusing the same
+   `page.addInitScript`/`page.pdf()` approach as the CLI script but against the
+   frontend's already-running dev server rather than spawning its own. `POST
+   /api/pdf/render` (optional `?answerKey=true`) takes a raw `LevelProgress` JSON body
+   and returns PDF bytes; `Web App/frontend/vite.config.ts` proxies `/api/pdf` to it
+   (port 8010, alongside the FastAPI backend's 8000). The dashboard's **Preview** and
+   **Download** buttons (`LevelDashboardPage.tsx`) are wired up to it — see
+   `level_dashboard_pagination_spec.md` §6.3. **Still not done:** building the cover
+   page from the real `Front Cover.svg` template (§3, §12.2) instead of the current
+   approximated markup — blocked on the project owner's promised additional context.
