@@ -56,13 +56,14 @@ export interface CoverContent {
 // it — so it is not (and cannot be) validator-checked.
 export const COVER_CONTENT: Record<string, CoverContent> = {
   pickaxe: {
+    // Replaced 2026-08-21 (owner). The first version was `.,.,. / .,.,. / s,|,g`
+    // — a single wall in an otherwise empty grid, which blown up to page width
+    // read as a few stray lines rather than as a maze. This one walls off both
+    // upper rows, so the scaled-up watermark actually shows a maze's structure.
+    // Validator-checked: VALID, unique solution, and the trace below is its
+    // canonical output verbatim.
     watermark: {
-      maze: { pickaxe_count: 1, width: 3, height: 3, maze: ['.,.,.', '.,.,.', 's,|,g'] },
-      // The validator's own canonical trace for this maze is the wandering
-      // "S,7 -> 4 -> 1 -> 2 -> 5 -> 8 -> 9(break | wall)". This short route
-      // breaks the same single wall, so by rules.md §6 ("solution" = a distinct
-      // set of broken walls, not a distinct route) it is the SAME solution — and
-      // it reads far better blown up to page width. Owner-specified.
+      maze: { pickaxe_count: 1, width: 3, height: 3, maze: ['_|,_|,_', '_|,_|,_', 's,|,g'] },
       solutionTrace: 'S,7 -> 8 -> 9(break | wall)',
     },
     instructionLines: ['Let\u2019s break the walls with a pickaxe {pickaxe}', 'and reach the goal!'],

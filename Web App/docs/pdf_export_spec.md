@@ -130,11 +130,36 @@ found, so a template that changes shape fails the export instead of silently pri
 
 **Four-part anatomy (project owner, 2026-08-21).** The page divides into header /
 title band / body / direction box. The body carries a sample question of this maze type,
-scaled to the page width at low opacity with its ideal line drawn, as a watermark — and
-with **no outer panel border**, the one documented exception to
-`pdf_design_spec.md` §6.1 (see §12.2 there for why the frame does not survive being scaled
-to page width). The direction box always sits **in front of** the watermark, hiding part
-of it. That layering is not
+drawn faintly with its ideal line as a watermark — and with **no outer panel border**, the
+one documented exception to `pdf_design_spec.md` §6.1 (see §12.2 there for why the frame
+does not survive being scaled up). The direction box always sits **in front of** the
+watermark, hiding part of it.
+
+**Watermark sizing (revised 2026-08-21 on owner review).** It is *larger* than the page,
+not merely page-width, and clipped to the body band. Three constraints interact, and the
+non-obvious one is that they fight each other: the Start figure sits in the maze's bottom
+row and grows upward from its cell centre, so **scaling the watermark up pushes that
+figure's head further underneath the Direction box**, not clear of it. The owner's rule is
+that the head and body must be plainly visible and only the legs may be cut. So the panel
+is pushed *down* as it is scaled up, and the overflow is clipped rather than left to run
+off the sheet — an unclipped overflow on a fixed-height print page can spill into an extra
+blank PDF page. Current values are in `CoverPage.tsx`'s `WATERMARK`, with the arithmetic
+spelled out there.
+
+**Every example on this page carries its maze type's question badge.** The watermark, the
+correct example and the counter-example all show the pickaxe row + count bubble above the
+maze, exactly as a real question page does (§4.2). This was missing until the owner flagged
+it on 2026-08-21, and it matters most on the counter-example: its whole point is "you broke
+2 walls but had only 1 pickaxe", which is unreadable if the pickaxe count isn't on the
+panel. The counter-example's large ✗ is offset down by the badge height so it covers the
+maze only, never the count. The badge is rendered by `pdfMazeTypeRegistry.tsx`'s exported
+`Badge` at an explicit point height, so the same component serves both screen-sized and
+page-sized uses.
+
+**The counter-example also carries a ✗-in-a-circle on its top-left corner**, labelling the
+whole container as the wrong example — distinct from the large ✗ over the maze, which marks
+that specific answer wrong. It straddles the corner rather than sitting inside it, because
+the container's interior is fully taken by the caption and the maze. That layering is not
 done with clip paths — the watermark is drawn *beneath the whole template*, and the
 template's own opaque white header rect, opaque Direction-box fill, and gray title band
 mask it exactly where needed. `Front Cover.svg` is therefore never edited, and a redraw

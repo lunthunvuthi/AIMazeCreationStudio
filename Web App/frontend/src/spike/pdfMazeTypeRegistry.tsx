@@ -29,16 +29,30 @@ export interface PdfQuestionPanelProps {
 // the icon+bubble proportions and layout math below are unchanged.
 const BADGE_SCALE = 3
 
-function Badge({ pickaxeCount }: { pickaxeCount: number }) {
+// Exported so the cover (CoverPage.tsx) can put the same badge above its three
+// example mazes. `heightPt` renders it at an exact point height instead of the
+// default 3x-of-16px screen size — the cover's panels are sized in `pt` to line
+// up with Front Cover.svg's coordinate system, and its watermark badge is far
+// larger than any on-screen one.
+export function Badge({
+  pickaxeCount,
+  heightPt,
+  className = 'mb-1',
+}: {
+  pickaxeCount: number
+  heightPt?: number
+  className?: string
+}) {
   const bubbleW = 22
   const iconSize = 16
   const vbWidth = pickaxeCount * iconSize + bubbleW + 6
+  // The viewBox is vbWidth x iconSize, so width tracks height by that ratio —
+  // both sizing paths below scale uniformly, they just differ in unit.
+  const style = heightPt
+    ? { width: `${(vbWidth / iconSize) * heightPt}pt`, height: `${heightPt}pt` }
+    : { width: `${vbWidth * BADGE_SCALE}px`, height: `${iconSize * BADGE_SCALE}px` }
   return (
-    <svg
-      viewBox={`0 0 ${vbWidth} ${iconSize}`}
-      className="mb-1"
-      style={{ width: `${vbWidth * BADGE_SCALE}px`, height: `${iconSize * BADGE_SCALE}px` }}
-    >
+    <svg viewBox={`0 0 ${vbWidth} ${iconSize}`} className={className} style={style}>
       {Array.from({ length: pickaxeCount }, (_, i) => (
         <PickaxeIcon key={i} cx={iconSize * (i + 0.5)} cy={iconSize / 2} size={iconSize} />
       ))}

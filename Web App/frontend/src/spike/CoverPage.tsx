@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { MONTH_NAMES } from '../types/maze'
 import { hydrateDraftFromMazeData } from '../registry/pickaxe/wizardMaze'
 import { coverContentFor, type CoverExample } from './coverTutorial'
+import { Badge } from './pdfMazeTypeRegistry'
 import WallGrid from './WallGrid'
 
 // The cover page, built on the designer's real `Front Cover.svg` used AS-IS.
@@ -71,24 +72,57 @@ const SANS_STACK = "Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
 const BODY = { x: 23.96, y: 213.01, w: 547.37, h: 603.02 }
 const BOX = { x: 70.87, y: 272.25, w: 453.54, h: 396.85 }
 
-// Part 3 — "scale it to the width of the page", vertically centered in the body
-// band. The maze is square, so page width fixes both dimensions; the body is
-// taller than it is wide, which leaves ~28pt of breathing room top and bottom.
-const WATERMARK = { x: BODY.x, y: BODY.y + (BODY.h - BODY.w) / 2, size: BODY.w }
-const WATERMARK_OPACITY = 0.12
+// Part 3 — the watermark, sized and placed against three constraints the owner
+// set on 2026-08-21:
+//   * bigger than the page, not merely page-width;
+//   * the Start figure's head and body must clear the Direction box (which
+//     covers y 272.25..669.10) — only its legs may be cut off;
+//   * it carries the pickaxe badge, like a real question panel.
+// Those pull against each other: scaling up alone pushes the figure's head
+// *further* under the box, because the figure sits in the bottom row and grows
+// upward from its cell centre. So the panel is pushed down as it grows, and the
+// overflow is clipped to the body band rather than left to run off the sheet —
+// unclipped overflow on a fixed-height print page can spill into an extra blank
+// PDF page.
+//   maze top 267 + 0.7 x 620 puts the figure's head at y 703, 34pt clear of the box;
+//   maze bottom 887 is clipped at the body's 816 — that clip is the legs.
+// `left` is negative so the 620pt maze stays centred on the 547.37pt body and
+// bleeds equally off both sides.
+const WATERMARK = {
+  size: 620,
+  left: (BODY.w - 620) / 2,
+  top: 54,
+  badgeTop: 6,
+  badgeHeight: 40,
+  // The badge can't sit directly above the maze — that lands it under the title
+  // band, which is opaque. It goes in the 59pt strip between the band and the
+  // Direction box, aligned to the body's visible left edge rather than to the
+  // maze's clipped one.
+  badgeLeft: 10,
+  opacity: 0.12,
+}
 
-// Part 4 — Direction-box-local layout. The pill tab ends 40.74pt down; the whole
-// content block (instruction lines + examples row, 247pt tall) is centered in
-// the 337pt of box left below it.
-// Vertically centered as one block in the 356pt of box below the pill:
-// 48pt of instruction + 24pt gap + a 175pt examples row = 247pt, leaving 54.5pt
-// above and below.
-const INSTRUCTION = { top: 95.5, fontSize: 17, lineHeight: 24 }
-const ROW = { top: 167.5, height: 175 }
-const CORRECT = { left: 22, size: ROW.height }
-// Horizontal budget: 22 + 175 (correct) + 20 (gap) + 214.54 (wrong) + 22 = 453.54.
+// Part 4 — Direction-box-local layout. The pill tab ends 40.74pt down.
+// Vertical rhythm: 23pt pill -> instruction (tightened on the owner's request,
+// 2026-08-21), 24pt instruction -> examples, 46pt below. Closing the pill gap
+// without also closing the one below it just moves the empty space into the
+// middle of the box, which looks worse than having it at the bottom — so both
+// gaps are set together.
+const INSTRUCTION = { top: 64, fontSize: 17, lineHeight: 24 }
+// Each example is a full question unit now — badge above, maze below — so the
+// row is 20 + 4 + 191 = 215pt tall.
+const ROW = { top: 136, height: 215 }
+const CORRECT = { left: 14, size: 191, badgeHeight: 20, badgeGap: 4 }
+// Horizontal budget: 14 + 191 (correct) + 20 (gap) + 214.54 (wrong) + 14 = 453.54.
+// Side padding came down from 22 to 14 to buy the correct example those extra
+// 16pt — it is the panel a child actually reads, so it gets the width.
 // Inside the wrong container: 9 + 104 (caption) + 6 + 86 (maze) + 9 = 214.
-const WRONG = { left: 217, w: 214.54, h: 108, pad: 9, textW: 104, gap: 6, mazeSize: 86, fontSize: 8, lineHeight: 11 }
+// Height: 9 + (14 badge + 3 + 86 maze) + 9 = 121.
+const WRONG = {
+  left: 225, w: 214.54, h: 121, pad: 9, textW: 104, gap: 6,
+  mazeSize: 86, badgeHeight: 14, badgeGap: 3, fontSize: 8, lineHeight: 11,
+  cornerMark: 22,
+}
 
 // Inline pickaxe for the `{pickaxe}` token in the instruction/caption strings.
 // Sized in `em` so it tracks whatever font size its line is set at.
@@ -113,16 +147,38 @@ function LineWithPickaxe({ line }: { line: string }) {
   )
 }
 
-// One example maze, sized in pt. `decorated` turns on the cover-only sparkle +
-// pickaxe-bubble callouts at each broken wall (pdf_design_spec.md §5).
-function ExampleMaze({ example, size, decorated }: { example: CoverExample; size: number; decorated: boolean }) {
+// One example maze as a complete question unit — pickaxe badge above, maze
+// below — matching how every real question page presents one (pdf_design_spec.md
+// §6.4). The badge was missing here until the owner flagged it on 2026-08-21;
+// without it the cover teaches the pickaxe rule using a panel that doesn't show
+// how many pickaxes you get, which is the very thing the rule is about.
+// `decorated` turns on the cover-only sparkle + pickaxe-bubble callouts at each
+// broken wall (pdf_design_spec.md §5).
+function ExampleMaze({
+  example,
+  size,
+  decorated,
+  badgeHeight,
+  badgeGap,
+}: {
+  example: CoverExample
+  size: number
+  decorated: boolean
+  badgeHeight: number
+  badgeGap: number
+}) {
   const draft = useMemo(
     () => hydrateDraftFromMazeData(example.maze, example.solutionTrace),
     [example],
   )
   return (
-    <div style={{ width: `${size}pt`, height: `${size}pt` }}>
-      <WallGrid grid={draft.grid} path={draft.path} wavy tutorialDecorations={decorated} className="block h-full w-full" />
+    <div style={{ width: `${size}pt` }}>
+      <div style={{ marginBottom: `${badgeGap}pt` }}>
+        <Badge pickaxeCount={example.maze.pickaxe_count} heightPt={badgeHeight} className="" />
+      </div>
+      <div style={{ width: `${size}pt`, height: `${size}pt` }}>
+        <WallGrid grid={draft.grid} path={draft.path} wavy tutorialDecorations={decorated} className="block h-full w-full" />
+      </div>
     </div>
   )
 }
@@ -148,6 +204,13 @@ function patchTemplate(raw: string, level: string, month: number, week: number):
     .replace(/clippath/g, 'fcv-clippath')
     .replace(/id="Layer_1"/, 'id="fcv-layer"')
     .replace('<svg ', '<svg width="100%" height="100%" ')
+    // Thicken the "Name:" fill line. The designer draws it as `stroke-dasharray:
+    // 0 5` with a round cap — i.e. a row of dots — but at 0.5px they are nearly
+    // invisible in print, which read as "Name:" followed by blank space. 1.8px
+    // in the mid grey renders as the row of dots a child can write on. Appended
+    // after the designer's own <style> so it wins on a specificity tie; the file
+    // on disk is still untouched.
+    .replace('</defs>', '<style>.fcv-cls-2 { stroke-width: 1.8px; stroke: #808285; }</style></defs>')
 
   const monthAbbr = MONTH_NAMES[month - 1].slice(0, 3)
   // Abbreviated deliberately: the field starts at x=460.72 and the page border
@@ -245,18 +308,34 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
           in the plain question-panel style (straight ideal line, no tutorial
           decorations): it is a scaled-up sample question, not a second teaching
           illustration. `showBorder={false}` — see WallGrid's prop docs; the
-          panel frame does not survive being blown up to page width. */}
+          panel frame does not survive being blown up to page width.
+          The wrapper is the body band with `overflow: hidden`, which is what
+          lets the maze be larger than the page — see WATERMARK's comment. */}
       <div
         style={{
           position: 'absolute',
-          left: `${WATERMARK.x}pt`,
-          top: `${WATERMARK.y}pt`,
-          width: `${WATERMARK.size}pt`,
-          height: `${WATERMARK.size}pt`,
-          opacity: WATERMARK_OPACITY,
+          left: `${BODY.x}pt`,
+          top: `${BODY.y}pt`,
+          width: `${BODY.w}pt`,
+          height: `${BODY.h}pt`,
+          overflow: 'hidden',
+          opacity: WATERMARK.opacity,
         }}
       >
-        <WallGrid grid={watermarkDraft.grid} path={watermarkDraft.path} className="block h-full w-full" showBorder={false} />
+        <div style={{ position: 'absolute', left: `${WATERMARK.badgeLeft}pt`, top: `${WATERMARK.badgeTop}pt` }}>
+          <Badge pickaxeCount={content.watermark.maze.pickaxe_count} heightPt={WATERMARK.badgeHeight} className="" />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${WATERMARK.left}pt`,
+            top: `${WATERMARK.top}pt`,
+            width: `${WATERMARK.size}pt`,
+            height: `${WATERMARK.size}pt`,
+          }}
+        >
+          <WallGrid grid={watermarkDraft.grid} path={watermarkDraft.path} className="block h-full w-full" showBorder={false} />
+        </div>
       </div>
 
       {/* z1 — Parts 1, 2 and 4's shell: the designer's file, as-is. */}
@@ -299,7 +378,13 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
         {/* The correct example — hand-drawn wavy ideal line plus a sparkle and
             pickaxe-bubble callout at the one wall it breaks. */}
         <div style={{ position: 'absolute', left: `${CORRECT.left}pt`, top: `${ROW.top}pt` }}>
-          <ExampleMaze example={content.correct} size={CORRECT.size} decorated />
+          <ExampleMaze
+            example={content.correct}
+            size={CORRECT.size}
+            decorated
+            badgeHeight={CORRECT.badgeHeight}
+            badgeGap={CORRECT.badgeGap}
+          />
         </div>
 
         {/* The counter-example, in its own bordered container: caption on the
@@ -321,6 +406,29 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
             gap: `${WRONG.gap}pt`,
           }}
         >
+          {/* ✗-in-a-circle straddling the top-left corner, owner-requested
+              2026-08-21. It labels the whole container as the counter-example
+              — distinct from the large ✗ over the maze itself, which marks the
+              specific answer as wrong. Centred on the corner rather than placed
+              inside it: the container is only 121pt tall and its interior is
+              fully spoken for by the caption and the maze. */}
+          <svg
+            viewBox="0 0 24 24"
+            style={{
+              position: 'absolute',
+              left: `${-WRONG.cornerMark / 2}pt`,
+              top: `${-WRONG.cornerMark / 2}pt`,
+              width: `${WRONG.cornerMark}pt`,
+              height: `${WRONG.cornerMark}pt`,
+              overflow: 'visible',
+            }}
+          >
+            <circle cx={12} cy={12} r={10.5} fill="#fff" stroke={TPL_MID_GRAY} strokeWidth={1.8} />
+            <g stroke={TPL_MID_GRAY} strokeWidth={2.6} strokeLinecap="round">
+              <line x1={7.5} y1={7.5} x2={16.5} y2={16.5} />
+              <line x1={16.5} y1={7.5} x2={7.5} y2={16.5} />
+            </g>
+          </svg>
           <div
             style={{
               width: `${WRONG.textW}pt`,
@@ -339,12 +447,31 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
               </div>
             ))}
           </div>
-          <div style={{ position: 'relative', width: `${WRONG.mazeSize}pt`, height: `${WRONG.mazeSize}pt` }}>
+          <div style={{ position: 'relative', width: `${WRONG.mazeSize}pt` }}>
             {/* No sparkle/pickaxe-bubble callouts here — at this panel size two
                 sets of them are unreadable, and the caption plus the ✗ already
-                carry the point. */}
-            <ExampleMaze example={content.wrong} size={WRONG.mazeSize} decorated={false} />
-            <svg viewBox="0 0 100 100" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                carry the point. The badge IS shown: the whole point of this
+                panel is "you used 2 walls but have only 1 pickaxe", which is
+                unreadable if the pickaxe count isn't on the panel. */}
+            <ExampleMaze
+              example={content.wrong}
+              size={WRONG.mazeSize}
+              decorated={false}
+              badgeHeight={WRONG.badgeHeight}
+              badgeGap={WRONG.badgeGap}
+            />
+            {/* Offset down by the badge's height so the ✗ covers the maze only,
+                not the pickaxe count the reader needs to see. */}
+            <svg
+              viewBox="0 0 100 100"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: `${WRONG.badgeHeight + WRONG.badgeGap}pt`,
+                width: `${WRONG.mazeSize}pt`,
+                height: `${WRONG.mazeSize}pt`,
+              }}
+            >
               <g stroke={TPL_MID_GRAY} strokeWidth={5.5} strokeLinecap="round" opacity={0.85}>
                 <line x1={18} y1={18} x2={82} y2={82} />
                 <line x1={82} y1={18} x2={18} y2={82} />

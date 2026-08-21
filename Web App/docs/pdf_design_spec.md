@@ -485,6 +485,12 @@ and inspecting it (not just surveying the viewBox) found:
 - The "Think!"/"Think!" wordmark — but as **outlined vector paths**, not live text (the
   designer converted it to curves to lock the logo lockup). Fill `#231f20`. Treat as a
   fixed shape, not as text in any font.
+- **One patched value, 2026-08-21:** the `Name:` fill line is drawn as
+  `stroke-dasharray: 0 5` with a round cap — i.e. a row of dots — but at `stroke-width:
+  .5px` in light grey they are nearly invisible in print, so the field read as "Name:"
+  followed by blank space. `CoverPage.tsx` overrides that class to `1.8px` in the mid grey,
+  which renders as the dotted rule a child can write on. Style override only; the file on
+  disk is untouched.
 - Live, **editable text** for the three dynamic header fields: `"Name:"` label at
   `translate(189.36, 86.64)`, a dashed name-fill line (`stroke-dasharray: 0 5`, gray
   `#a7a9ac`, matching §3's "reduced visual weight" description), the level field
@@ -509,8 +515,8 @@ a single combined path, so it does not turn up looking for either. Treat it like
 wordmark: a fixed shape, not text in any font.
 
 **Genuinely blank, composited in by `spike/CoverPage.tsx` (built 2026-08-21):**
-- The **body watermark** — a sample question of the maze type, scaled to the page width
-  and drawn at ~12% opacity with its ideal line. Drawn *beneath* this whole template, so
+- The **body watermark** — a sample question of the maze type, scaled larger than the page
+  and drawn at ~12% opacity with its ideal line and its pickaxe badge. Drawn *beneath* this whole template, so
   the template's own opaque white header rect / Direction-box fill and its gray title band
   mask it with no clip paths and no edits to this file.
   **The watermark panel carries no outer border** (`WallGrid`'s `showBorder={false}`) —
@@ -522,6 +528,10 @@ wordmark: a fixed shape, not text in any font.
   few parts of the watermark still visible — it reads as a stray printing rule rather than
   as part of a maze. Interior walls, endpoint dots, Start/Goal and the ideal line are all
   still drawn; only the frame is dropped.
+  The watermark's badge cannot sit directly above its maze the way a question panel's does
+  — at this scale that position falls inside the title band, which is opaque. It goes in
+  the ~59pt strip between the band and the Direction box instead, aligned to the body's
+  visible left edge rather than to the maze's clipped one.
 - The instruction sentence ("Let's break the walls with a pickaxe … and reach the goal!"),
   centered on two authored lines with the real `symbol-26.svg` pickaxe inline.
 - **Both example maze panels** — the correct-example panel (with its sparkle/pickaxe-
