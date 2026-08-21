@@ -59,7 +59,13 @@ export default function LevelDashboardPage() {
   const currentSnapshot = JSON.stringify(current)
   const canDownload = allComplete && previewedBlob !== null && previewedSnapshot === currentSnapshot
 
-  async function handlePreview() {
+  // Arrow consts, not `function` declarations, on purpose. The guard above
+  // narrows `current` to non-null, but a hoisted function declaration is
+  // considered created before that narrowing, so TypeScript re-widens `current`
+  // to `LevelProgress | null` inside one — which is what broke `npm run build`
+  // (three TS2345 errors) even though `tsc --noEmit` reported clean — see the
+  // warning in tsconfig.json for why that command proves nothing here.
+  const handlePreview = async () => {
     setIsRendering(true)
     try {
       const blob = await renderPdf(current)
@@ -73,7 +79,7 @@ export default function LevelDashboardPage() {
     }
   }
 
-  function handleDownload() {
+  const handleDownload = () => {
     if (!previewedBlob) return
     downloadBlob(previewedBlob, buildExportFilename(current, 'pdf'))
     downloadLevelProgress(current)

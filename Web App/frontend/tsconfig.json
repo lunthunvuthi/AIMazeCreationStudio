@@ -1,4 +1,9 @@
 {
+  // WARNING: this is a solution-style config — `files: []` plus project
+  // references. `tsc --noEmit` run against it therefore typechecks **zero**
+  // source files and always exits 0. It is not a typecheck; do not cite it as
+  // one. The real check is `npm run build` (which runs `tsc -b`), or
+  // `npx tsc -b --force` on its own.
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
