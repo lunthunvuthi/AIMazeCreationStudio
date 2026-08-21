@@ -28,9 +28,11 @@ export default function QuestionSlotCard({
   question: MazeQuestion
   starOptions: number[]
   onChangeStar: (star: number) => void
-  // Optional only because §4.1's locked cover row used to render a card with no
-  // Remove control; every caller passes it now.
-  onRemove?: () => void
+  // Required: the Remove button below is rendered unconditionally, so a caller
+  // that omitted this would ship an enabled control that does nothing. It was
+  // optional only for §4.1's locked cover row, which rendered a card with no
+  // Remove control at all — that row is gone (2026-08-21).
+  onRemove: () => void
 }) {
   return (
     <div className="flex flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">

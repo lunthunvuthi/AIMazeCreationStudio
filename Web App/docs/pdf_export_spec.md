@@ -175,7 +175,8 @@ pickaxe) and so is not validator-checkable.
 **This makes `pages[0]` an ordinary question page.** The cover no longer consumes a
 question, so the renderer renders every row of `pages[]` (it previously rendered
 `pages.slice(1)`, which would now silently drop an authored question). The Level
-Dashboard still labels row 0 "Cover / Tutorial" — stale, tracked as a follow-up. See
+Dashboard was brought in line on 2026-08-21 — it no longer labels row 0
+"Cover / Tutorial" or locks it (`level_dashboard_pagination_spec.md` §4.1). See
 `PRODUCTION_PROCESS.md` §4.
 
 ---
@@ -186,7 +187,7 @@ Dashboard still labels row 0 "Cover / Tutorial" — stale, tracked as a follow-u
 
 **Superseded by `level_dashboard_pagination_spec.md`:** pagination is no longer computed
 by the renderer at export time. As of the dashboard redesign (2026-08-19), page/row
-membership (1-2 questions per row, 1 on the cover row) is authored directly on the
+membership (1-2 questions per row) is authored directly on the
 Level Dashboard and saved as `LevelProgress.pages[]` — the PDF renderer simply renders
 `pages[]` in order, one PDF page per `PageRow`, with no auto-fit-by-height logic. This
 keeps the print output and the dashboard's page-row preview in visual agreement (what
@@ -194,8 +195,11 @@ you arranged is what prints), rather than risking the renderer's height-based pa
 disagreeing with the dashboard's own row boundaries.
 
 - Each page's numbered box shows the **1-based index of that `PageRow` within
-  `pages[]`** (matches the sample: boxes 1-6 across 6 pages) — the cover row (index 0)
-  is unnumbered/untitled per §3, numbering starts at the first question row.
+  `pages[]`** (matches the sample: boxes 1-6 across 6 pages). The cover itself is
+  unnumbered/untitled per §3, and as of 2026-08-21 it consumes no row at all — its
+  tutorial is a fixed constant (§3, `spike/coverTutorial.ts`) — so numbering starts at
+  `pages[0]`, which is an ordinary question page like every other row
+  (`level_dashboard_pagination_spec.md` §4.1).
 - **Laurel-wreath / "Bonus" marker — superseded 2026-08-19, now manual:** the sample
   marks its last 2 pages with a laurel-wreath icon next to the number, originally
   interpreted (2026-08-19, earlier same day) as "this row's questions include the

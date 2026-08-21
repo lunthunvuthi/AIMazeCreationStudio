@@ -41,7 +41,11 @@ export default function LevelDashboardPage() {
 
   const allQuestions = flattenPages(current.pages)
   const completeCount = allQuestions.filter((q) => q.status === 'complete').length
-  const allComplete = completeCount === allQuestions.length
+  // `allQuestions.length > 0` matters now that row 0 self-deletes like any other
+  // row (2026-08-21): removing every question leaves `pages: []`, and without
+  // this guard 0 === 0 would report an empty sheet as fully complete and offer
+  // it for export — the pdf-service rejects a payload with no pages.
+  const allComplete = allQuestions.length > 0 && completeCount === allQuestions.length
   const starOptions = Object.keys(mazeType.starParams)
     .map(Number)
     .sort((a, b) => a - b)
@@ -114,10 +118,15 @@ export default function LevelDashboardPage() {
           >
             Save Progress
           </button>
+          {/* An empty sheet is reachable now that row 0 self-deletes like any
+              other row (2026-08-21): removing every question leaves
+              `pages: []`, which pdf-service rejects outright. Guarding here
+              keeps that from surfacing as a raw backend message in an alert. */}
           <button
             type="button"
             onClick={handlePreview}
-            disabled={isRendering}
+            disabled={isRendering || allQuestions.length === 0}
+            title={allQuestions.length === 0 ? 'Add a question first' : undefined}
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-600 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:text-slate-400"
           >
             {isRendering ? 'Rendering…' : 'Preview'}

@@ -148,7 +148,7 @@ page rows**, each rendered full-width, in `pages[]` order:
 
 ## 4. Page Row Rules
 
-### 4.1 Row 0 is an ordinary row **(superseded 2026-08-21)**
+### 4.1 Row 0 is an ordinary row **(supersedes 2026-08-19's locked cover row)**
 
 There is no locked row. Row 0 takes the same controls as every other row — page number,
 Bonus toggle, Remove, "+ Add question", and (once §5 is built) drag in and out — and it
@@ -174,8 +174,8 @@ self-deletes when emptied like the rest (§4.3).
 ### 4.3 Empty rows self-delete **(CONFIRMED interpretation)**
 
 Any row that drops to 0 questions — its only or last question removed or dragged
-elsewhere, row 0 included since 2026-08-21 (§4.1) — is removed from `pages[]` immediately — no empty placeholder row is ever
-rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
+elsewhere, row 0 included since 2026-08-21 (§4.1) — is removed from `pages[]`
+immediately — no empty placeholder row is ever rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
 separate page-number field), removing a row automatically renumbers everything after it
 — no explicit reindexing step needed.
 
@@ -190,6 +190,7 @@ Each row gets a **"Bonus" trigger** — a small toggle/checkbox next to that row
 - **On:** the page-number box renders with the **laurel design** instead —
   `pdf_design_spec.md` §7's laurel wreath (`symbol-19.svg`, `pdf_design_spec.md` §12.1)
   wrapped around that row's number.
+
 **This replaces the previous plan** (`pdf_export_spec.md` §4.1, `pdf_design_spec.md`
 §7) to compute the laurel marker automatically from "does this row contain the sheet's
 highest star rating." That heuristic is now dropped in favor of direct manual control —
