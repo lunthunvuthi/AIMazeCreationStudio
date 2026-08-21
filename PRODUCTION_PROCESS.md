@@ -131,13 +131,14 @@ the PDF for user."*
 3. Answer key is the same sequence with solution paths overlaid — a separate download
    (`pdf_export_spec.md` §6).
 
-**Consequence for the data model, and a known inconsistency.** Because A9's tutorial is
-fixed, the cover no longer consumes a question, so *every* row in `pages[]` is a question
-page. The renderer was changed to match on 2026-08-21 (it used to render
-`pages.slice(1)`, dropping `pages[0]`). The Level Dashboard, however, still renders row 0
-as a locked card labelled **"Cover / Tutorial"** — that label and its locking are now
-wrong, and `levelStore.ts`'s `startNewLevel` still reserves `pages[0]` for it. Deliberate
-follow-up, out of scope for the pass that built the cover.
+**Consequence for the data model.** Because A9's tutorial is fixed, the cover no longer
+consumes a question, so *every* row in `pages[]` is a question page. The renderer was
+changed to match on 2026-08-21 (it used to render `pages.slice(1)`, dropping `pages[0]`),
+and the Level Dashboard followed later the same day: it no longer renders row 0 as a
+locked "Cover / Tutorial" card, `levelStore.ts` no longer reserves `pages[0]`, and each
+row's "Page N" label is now read off `pages[]` with the same `i + 1` the renderer uses,
+so a row's dashboard label and its printed page number cannot drift apart. See
+`level_dashboard_pagination_spec.md` §4.1.
 
 ---
 

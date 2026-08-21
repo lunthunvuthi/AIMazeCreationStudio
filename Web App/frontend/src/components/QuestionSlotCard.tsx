@@ -23,16 +23,14 @@ export default function QuestionSlotCard({
   starOptions,
   onChangeStar,
   onRemove,
-  hideRemove,
 }: {
   mazeTypeId: string
   question: MazeQuestion
   starOptions: number[]
   onChangeStar: (star: number) => void
+  // Optional only because §4.1's locked cover row used to render a card with no
+  // Remove control; every caller passes it now.
   onRemove?: () => void
-  // level_dashboard_pagination_spec.md §4.1 — the cover row's question has no
-  // Remove control at all (it can never leave pages[0]).
-  hideRemove?: boolean
 }) {
   return (
     <div className="flex flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
@@ -62,15 +60,13 @@ export default function QuestionSlotCard({
         </select>
       </label>
 
-      {!hideRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="self-end text-xs font-medium text-slate-400 hover:text-red-500"
-        >
-          Remove
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="self-end text-xs font-medium text-slate-400 hover:text-red-500"
+      >
+        Remove
+      </button>
     </div>
   )
 }

@@ -42,8 +42,10 @@ function readFixture(): SpikeFixture {
 //     `pages.slice(1)`, because `pages[0]` was a "cover row" whose question fed
 //     the cover illustration. Now that the cover's tutorial is fixed, consuming
 //     pages[0] that way would silently drop an authored question from the
-//     output. The Level Dashboard still labels row 0 "Cover / Tutorial" — that
-//     label is now stale and is a known follow-up, out of scope here.
+//     output. The Level Dashboard was brought in line on 2026-08-21: it renders
+//     every row uniformly and labels each one with the same `i + 1` over
+//     `pages[]` that the badge loop below uses, so a row's dashboard label and
+//     its printed page number cannot drift apart.
 //
 // Earlier reworks, for context: #1 rebuilt the maze panels against
 // pdf_design_spec.md's measured sample (WallGrid/icons.tsx) after the first pass
