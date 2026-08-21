@@ -57,10 +57,10 @@ async function loadFixtureData(dataPath) {
     throw new Error(`--data ${dataPath} is not valid JSON: ${err.message}`)
   }
   if (!Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-    throw new Error(`--data ${dataPath} has no pages[] — expected a LevelProgress-shaped file with at least a cover row`)
+    throw new Error(`--data ${dataPath} has no pages[] — expected a LevelProgress-shaped file with at least one question page`)
   }
   if (!Array.isArray(parsed.pages[0].questions) || parsed.pages[0].questions.length === 0) {
-    throw new Error(`--data ${dataPath}'s pages[0] (the cover row) has no questions — expected at least one`)
+    throw new Error(`--data ${dataPath}'s pages[0] has no questions — expected at least one`)
   }
   return parsed
 }
@@ -81,7 +81,9 @@ async function waitForServer(url, timeoutMs = 30000) {
 
 async function renderSheetVariant(page, answerKey, outPath) {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' })
-  await page.waitForSelector('text=Bonus Challenge')
+  // See pdf-service/render.js for why this is data-pdf-ready and no longer
+  // `text=Bonus Challenge`.
+  await page.waitForSelector('[data-pdf-ready="true"]')
   if (answerKey) {
     await page.getByText('Answer key (overlay solution path)').click()
     await page.waitForTimeout(150) // path/decoration re-render

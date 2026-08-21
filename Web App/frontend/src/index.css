@@ -1,1 +1,68 @@
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Roboto, self-hosted.
+
+   The designer's cover template (public/components/svg/Front Cover.svg) asks for
+   `Roboto-Bold, Roboto` and names no generic fallback. Roboto was not installed
+   anywhere, so that text was silently resolving to the browser's default serif —
+   wrong for a Kinder/Primary worksheet, and wrong in the exported PDF.
+
+   Self-hosted rather than linked from fonts.googleapis.com on purpose: PDF
+   rendering is a build/server-side step (Web App/pdf-service), and it must not
+   depend on outbound network access to a CDN. A missed CDN request would not
+   fail loudly — it would silently print the fallback font. These files are
+   served from /fonts/ by Vite's public dir, same as the SVG assets.
+
+   Source: Google Fonts, Roboto v51, latin + latin-ext subsets. Roboto is
+   Apache-2.0. v51 ships as a *variable* font, so one file covers every weight —
+   hence `font-weight: 100 900` on the `Roboto` family below.
+
+   `Roboto-Bold` and `Roboto-Medium` are declared as families in their own right,
+   which looks redundant but is not: the designer's SVG sets
+   `font-family: 'Roboto-Bold', Roboto` and sets no `font-weight`. Without a real
+   family under that exact name, that text would match `Roboto` at the default
+   weight 400 and render regular where the design wants bold. Each pins the
+   variable font to one weight, so the template's own font-family strings work
+   untouched — no rewriting the designer's file, and no CSS override on top of it.
+   --------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/roboto-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/roboto-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Roboto-Bold';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/roboto-latin.woff2') format('woff2'),
+    url('/fonts/roboto-latin-ext.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto-Medium';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/roboto-latin.woff2') format('woff2'),
+    url('/fonts/roboto-latin-ext.woff2') format('woff2');
+}

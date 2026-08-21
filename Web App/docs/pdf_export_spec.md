@@ -113,15 +113,45 @@ Static content, not derived from maze data except the header fields:
   must **not** leak into the real per-question panels (§4.2) or the answer key (§6).
 - **Decorative footer graphic:** purely cosmetic (muted maze/road motif), no data.
 
-**Build-from-template note (2026-08-19):** `Front Cover.svg` (`pdf_design_spec.md`
-§12.2) already has the logo, the three header text fields (as live text, positioned and
-in their real fonts), the title banner + mascot, the outer border, and the Direction
-box's container/pill shell all built and positioned. What it does **not** have — and
-what actually needs generating per-export — is the "Let's do it" title text, the
-instruction sentence, and both example maze panels inside the Direction box. That's the
-concrete meaning of "filling in the tutorial question" on this page: the shell is
-static and reusable across every export; only that tutorial content is data/maze-type
-driven.
+**Built 2026-08-21 — `Web App/frontend/src/spike/CoverPage.tsx`.** The cover is now
+composited on the real `Front Cover.svg`, and the note that used to sit here (predicting
+what would need generating) was one item wrong: **"Let's do it" IS already in the
+template**, as nine white outlined glyph paths inside the title-band group — see
+`pdf_design_spec.md` §12.2, corrected. Only two things get generated:
+
+- the **watermark** (§3's four-part breakdown below), and
+- the **Direction box's contents** — instruction sentence, correct example, counter-example.
+
+Everything else, including the title text, comes from the file untouched. The two header
+fields that ship with sample values (`Kinder`, `Aug / Week1`) are substituted with the
+real `LevelProgress` values; `CoverPage.tsx` throws if either field can no longer be
+found, so a template that changes shape fails the export instead of silently printing
+"Kinder" on a Primary sheet.
+
+**Four-part anatomy (project owner, 2026-08-21).** The page divides into header /
+title band / body / direction box. The body carries a sample question of this maze type,
+scaled to the page width at low opacity with its ideal line drawn, as a watermark — and
+with **no outer panel border**, the one documented exception to
+`pdf_design_spec.md` §6.1 (see §12.2 there for why the frame does not survive being scaled
+to page width). The direction box always sits **in front of** the watermark, hiding part
+of it. That layering is not
+done with clip paths — the watermark is drawn *beneath the whole template*, and the
+template's own opaque white header rect, opaque Direction-box fill, and gray title band
+mask it exactly where needed. `Front Cover.svg` is therefore never edited, and a redraw
+from the designer drops in without touching the masking.
+
+**The cover's tutorial mazes are fixed constants, not export data** —
+`spike/coverTutorial.ts`'s `COVER_CONTENT`, keyed by maze type (same extensibility seam
+as `pdfMazeTypeRegistry.tsx`). Confirmed by the owner: "for the cover page, the tutorial
+question is always fixed." Both PickAxe examples were run through the real validator
+before being committed; the counter-example is deliberately invalid (2 walls broken, 1
+pickaxe) and so is not validator-checkable.
+
+**This makes `pages[0]` an ordinary question page.** The cover no longer consumes a
+question, so the renderer renders every row of `pages[]` (it previously rendered
+`pages.slice(1)`, which would now silently drop an authored question). The Level
+Dashboard still labels row 0 "Cover / Tutorial" — stale, tracked as a follow-up. See
+`PRODUCTION_PROCESS.md` §4.
 
 ---
 
@@ -187,12 +217,42 @@ disagreeing with the dashboard's own row boundaries.
 
 ---
 
-## 5. Bonus Page
+## 5. Last Page (was: Bonus Page)
 
-Static, one per document: "Bonus Challenge — Be a mission maker!" heading, a blank
-boxed area sized for a child to hand-draw their own maze, and a closing Hatenyan mascot
-with "I did it!". No data-driven content — this page is identical across every exported
-sheet for a given maze type.
+Static, one per document, and as of 2026-08-21 **no longer rendered from markup** — the
+project owner supplied the finished artwork as full-bleed A4 rasters, one per level, at
+`Web App/frontend/public/components/images/`. `spike/LastPage.tsx` places the image for
+the sheet's level; nothing is composited onto it.
+
+- Both files are 2480×3508px — A4 at exactly 300dpi.
+- They are **not** two crops of one design. Kinder closes on Hatenyan with "I did it!";
+  Primary closes on Posuru plus two Hatenyan with "Well done! You did it!". The per-level
+  split is real content.
+- Keyed by **level, not maze type** — so a new maze type inherits it, but a new level
+  needs new artwork. **`advanced` has no artwork of its own and reuses Primary's**, on the
+  project owner's explicit instruction (2026-08-21). That is an editorial choice, not a
+  renderer default: the two pages differ in content, so which one Advanced borrows
+  matters. Replace with a dedicated file when one is produced. `LastPage.tsx` keeps a
+  visible placeholder branch for any unmapped level — unreachable through `LevelName`
+  today, but `level` comes from a save file at runtime.
+- **Colour management — resolved 2026-08-21.** Both files arrived as **CMYK /
+  U.S. Web Coated (SWOP) v2**, and the headless browser's implicit CMYK→RGB conversion
+  was measurably lighter than a colour-managed one (Kinder's mascot rich black rendered
+  `rgb(71,68,70)`, versus `rgb(36,30,32)` through ColorSync). The served copies are now
+  **sRGB IEC61966-2.1**, converted once with
+  `sips -m "sRGB Profile.icc" -s formatOptions best`; the same pixel now renders
+  `rgb(37,33,34)` in the PDF. The CMYK masters are preserved at
+  `Web App/assets-source/last-pages-cmyk/` — see that folder's README, and use those, not
+  the sRGB copies, for any real print run.
+- **Side effect worth knowing:** with an sRGB JPEG input, Chromium now embeds the file
+  **verbatim** (`/Filter /DCTDecode`, byte length identical to the source) instead of
+  decoding and re-encoding it as Flate. Better fidelity — no double re-encode — but the
+  exported PDF grew from ~284KB to ~729KB. If size ever matters, the lever is the source
+  JPEG's own quality, since the PDF now embeds it unchanged.
+
+The previous hand-coded version of this page (Bonus Challenge ribbon + "Be a mission
+maker!" + blank draw area + mascot, rebuilt in JSX from this section's original
+description) is deleted — the supplied images *are* that page, rendered by the designer.
 
 ---
 
@@ -260,6 +320,15 @@ sample, two distinct files), so a teacher can hand out only the question sheet.
    and returns PDF bytes; `Web App/frontend/vite.config.ts` proxies `/api/pdf` to it
    (port 8010, alongside the FastAPI backend's 8000). The dashboard's **Preview** and
    **Download** buttons (`LevelDashboardPage.tsx`) are wired up to it — see
-   `level_dashboard_pagination_spec.md` §6.3. **Still not done:** building the cover
-   page from the real `Front Cover.svg` template (§3, §12.2) instead of the current
-   approximated markup — blocked on the project owner's promised additional context.
+   `level_dashboard_pagination_spec.md` §6.3.
+   **2026-08-21 update:** the cover page is now built from the real `Front Cover.svg`
+   template (§3) and the last page from the supplied per-level artwork (§5), replacing
+   the approximated markup for both. The renderer's readiness signal changed with them:
+   it waits on `[data-pdf-ready="true"]`, set once the cover's template fetch and the
+   last page's image decode have both finished, instead of the old `text=Bonus Challenge`
+   selector (which pointed at markup that no longer exists, and which resolved before
+   those async loads completed). `@page` margin is now `0`, with each sheet element
+   exactly 210mm × 297mm carrying its own padding — the cover and last page are
+   full-bleed, and the previous `margin: 10mm` combined with 210mm-wide page elements had
+   been overflowing the 190mm printable width. Question-page content boxes are unchanged
+   at 190mm × 277mm.

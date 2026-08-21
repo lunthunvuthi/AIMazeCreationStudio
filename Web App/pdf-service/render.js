@@ -15,10 +15,10 @@ const PREVIEW_PATH = '/spike/pdf-preview'
 
 export function validateLevelProgressShape(parsed) {
   if (!parsed || !Array.isArray(parsed.pages) || parsed.pages.length === 0) {
-    throw new Error('Request body has no pages[] — expected a LevelProgress-shaped object with at least a cover row')
+    throw new Error('Request body has no pages[] — expected a LevelProgress-shaped object with at least one question page')
   }
   if (!Array.isArray(parsed.pages[0].questions) || parsed.pages[0].questions.length === 0) {
-    throw new Error("Request body's pages[0] (the cover row) has no questions — expected at least one")
+    throw new Error("Request body's pages[0] has no questions — expected at least one")
   }
 }
 
@@ -47,7 +47,13 @@ export async function renderPdf(browser, frontendUrl, levelProgress, { answerKey
     }, levelProgress)
 
     await page.goto(frontendUrl + PREVIEW_PATH, { waitUntil: 'networkidle' })
-    await page.waitForSelector('text=Bonus Challenge')
+    // The preview page flips data-pdf-ready once BOTH static pages have
+    // finished loading: the cover fetches Front Cover.svg (a fetch, so it
+    // resolves after networkidle) and the last page decodes a ~1MB JPEG.
+    // Printing before that yields a cover with no template and a blank final
+    // page. This replaced a `text=Bonus Challenge` wait, which pointed at the
+    // hand-coded bonus page that the designer's real last-page image replaced.
+    await page.waitForSelector('[data-pdf-ready="true"]')
     if (answerKey) {
       await page.getByText('Answer key (overlay solution path)').click()
       await page.waitForTimeout(150)

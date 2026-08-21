@@ -501,19 +501,82 @@ and inspecting it (not just surveying the viewBox) found:
   (`x≈121.9, y≈111.9, w≈15.5, h≈14.3`) — present in the file but not confirmed against
   anything in this spec; flag it if it turns out to matter, don't assume its purpose.
 
-**Genuinely blank, still needs to be composited in (this is what "filling in the
-tutorial question" means in practice):**
-- The "Let's do it" title text itself — not present as text or as outlined paths
-  anywhere in the file.
-- The instruction sentence ("Let's break the walls with a pickaxe...").
+**Correction, 2026-08-21 — the "Let's do it" title IS in the file.** This section
+previously listed it as missing. It is present, as **nine white outlined glyph paths**
+(`fill: #fff`) inside the title-band group, immediately after the band's filled polyline
+— one path per glyph of "Let's do it". It was missed because it is neither live text nor
+a single combined path, so it does not turn up looking for either. Treat it like the
+wordmark: a fixed shape, not text in any font.
+
+**Genuinely blank, composited in by `spike/CoverPage.tsx` (built 2026-08-21):**
+- The **body watermark** — a sample question of the maze type, scaled to the page width
+  and drawn at ~12% opacity with its ideal line. Drawn *beneath* this whole template, so
+  the template's own opaque white header rect / Direction-box fill and its gray title band
+  mask it with no clip paths and no edits to this file.
+  **The watermark panel carries no outer border** (`WallGrid`'s `showBorder={false}`) —
+  confirmed by the owner 2026-08-21: "watermark should be the scaled up maze, there will
+  be no border." This is the one exception to §6.1's rule that every panel has a frame
+  thicker than its walls. Reason it matters: blown up to the full page width, that 1.6mm
+  frame becomes a ~11pt pale grey rule spanning the whole sheet and hugging the page
+  border, and because the Direction box masks the maze's interior that rule is one of the
+  few parts of the watermark still visible — it reads as a stray printing rule rather than
+  as part of a maze. Interior walls, endpoint dots, Start/Goal and the ideal line are all
+  still drawn; only the frame is dropped.
+- The instruction sentence ("Let's break the walls with a pickaxe … and reach the goal!"),
+  centered on two authored lines with the real `symbol-26.svg` pickaxe inline.
 - **Both example maze panels** — the correct-example panel (with its sparkle/pickaxe-
-  bubble decorations, §5) and the incorrect-example panel (crossed-out, damaged flag,
-  §5) — neither exists in the file at all; the Direction box container is empty inside.
+  bubble decorations, §5) and the counter-example panel — neither exists in the file at
+  all; the Direction box container is empty inside. The counter-example sits in its own
+  bordered sub-container with a three-line caption beside it and a large ✗ over the maze.
 - The decorative footer motif (§4's cosmetic road/mountain graphic) — not found in this
-  file either, and still lowest-priority per §4/§11.
+  file either, and still lowest-priority per §4/§11. Note the composited watermark now
+  occupies that area, which may make the motif unnecessary.
+
+**Font caveat found while building this — resolved 2026-08-21.** The file's text asks for
+`Roboto-Bold, Roboto` and names **no generic fallback**, and Roboto was not installed
+anywhere — so the designer's live header text was printing in the browser's default
+*serif*, badly wrong for a Kinder/Primary worksheet.
+
+Roboto is now **self-hosted**: `frontend/public/fonts/roboto-latin{,-ext}.woff2` (Google
+Fonts, Roboto v51, Apache-2.0) with `@font-face` rules in `frontend/src/index.css`.
+Self-hosted rather than CDN-linked deliberately — PDF rendering is a server-side step, and
+a failed CDN request would not error, it would silently print the fallback font.
+
+Two things about those rules are worth not "simplifying" later:
+- Roboto v51 is a **variable** font, so one file covers every weight — hence
+  `font-weight: 100 900` on the `Roboto` family.
+- Families literally named **`Roboto-Bold`** and **`Roboto-Medium`** are also declared,
+  each pinning the variable font to one weight. This looks redundant but is required: the
+  designer's SVG sets `font-family: 'Roboto-Bold', Roboto` and sets **no** `font-weight`,
+  so without a real family under that exact name the text would match `Roboto` at the
+  default weight 400 and render regular where the design wants bold. With them, the
+  template's own font-family strings work untouched — verified by measuring the same
+  string, where `Roboto-Bold` and `Roboto`@700 render identically wide (355.73px) and
+  `Roboto`@400 renders 350.97px. `CoverPage.tsx` therefore applies **no** font override to
+  the template at all.
 
 Net effect: a renderer that starts from this file as its cover template gets the whole
-static shell (logo, header fields, banner, mascot, border, Direction box shell) for
-free, and only needs to generate/insert the tutorial-specific content above — which
-lines up with `pdf_export_spec.md` §3's existing description of what's data-driven on
-this page.
+static shell (logo, header fields, banner + title text + mascot, border, Direction box
+shell) for free, and only needs to generate/insert the watermark and the Direction box's
+contents — which lines up with `pdf_export_spec.md` §3's description of what's data-driven
+on this page. Since that content is fixed per maze type
+(`spike/coverTutorial.ts`), the cover is built once per maze type and reused by every
+sheet — see `PRODUCTION_PROCESS.md` stage A9.
+
+**Measured regions**, for anything positioning content on this template. The viewBox is
+A4 at 72pt/in, so 1 user unit = 1pt, and a wrapper sized to exactly 210mm × 297mm lets
+CSS `pt` offsets be read straight off the path data with no conversion:
+
+| Region | x | y |
+|---|---|---|
+| Page border rect | 23.96 … 571.33 | 25.70 … 816.03 |
+| Header white rect | 23.96 … 571.32 | 25.70 … 139.78 |
+| Title band (filled polyline) | 24.09 … 571.18 | 130.80 … 213.01 |
+| Direction container (rx 13.26) | 70.87 … 524.41 | 272.25 … 669.10 |
+| "Direction" pill tab | 94.75 … 186.19 | 290.31 … 312.99 |
+| Body (band bottom → page bottom) | 23.96 … 571.33 | 213.01 … 816.03 |
+
+One more thing to know before inlining this file rather than referencing it as an image:
+its classes are named `.cls-1` … `.cls-16` and its clipPath id is `clippath`, and an
+inline `<svg>`'s `<style>` block is document-global. `CoverPage.tsx` namespaces both while
+loading it, so nothing leaks onto the question pages sharing the document.

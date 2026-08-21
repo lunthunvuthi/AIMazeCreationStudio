@@ -1,16 +1,17 @@
-import { useMemo, useState } from 'react'
-import { MONTH_NAMES } from '../types/maze'
-import { GRAY, INK, LaurelWreath, MascotBust, MascotFull } from './icons'
+import { useCallback, useMemo, useState, type CSSProperties } from 'react'
+import type { LevelName } from '../types/maze'
+import CoverPage from './CoverPage'
+import { INK, LaurelWreath } from './icons'
+import LastPage from './LastPage'
 import { QuestionPanel } from './pdfMazeTypeRegistry'
 import { sampleFixture } from './sampleFixture'
 import type { SpikeFixture } from './types'
 
-// render_via_browser.mjs's --data flag injects a real LevelProgress payload
-// here via page.addInitScript before navigation (LevelProgress is a
-// structural superset of SpikeFixture — see types.ts). Falls back to the
-// hardcoded sample fixture when nothing was injected, so the plain `npm run
-// dev` / manual-browser path (and the no-`--data` hybrid render) are
-// unchanged.
+// render_via_browser.mjs's --data flag and pdf-service/render.js both inject a
+// real LevelProgress payload here via page.addInitScript before navigation
+// (LevelProgress is a structural superset of SpikeFixture — see types.ts).
+// Falls back to the hardcoded sample fixture when nothing was injected, so the
+// plain `npm run dev` / manual-browser path is unchanged.
 declare global {
   interface Window {
     __PDF_FIXTURE_DATA__?: SpikeFixture
@@ -21,38 +22,42 @@ function readFixture(): SpikeFixture {
   return window.__PDF_FIXTURE_DATA__ ?? sampleFixture
 }
 
-// Spike: renders the same fixture as ../../spikes/pdf-renderer/backend/render_reportlab.py
-// using real app components plus browser print CSS, for comparing renderer
-// technology per pdf_export_spec.md §7 item 5. Not a real route for the
-// finished app — temporary, remove (or promote) once the tech decision
-// lands. See this page's sibling README in the spikes/ folder for how to run
-// the backend half and a side-by-side writeup.
+// The print view the PDF service drives. Page sequence (pdf_export_spec.md §2):
 //
-// 2026-08-19 rework #1: this page previously used a dotted-background grid
-// and emoji icons that didn't match the real sample (see Web App/docs/
-// pdf_design_spec.md, written from directly measuring the sample's raster
-// pages). Rebuilt against that doc via WallGrid/icons.tsx.
+//   1        cover / direction page   — CoverPage.tsx, from the real
+//                                      Front Cover.svg template
+//   2..N-1   question pages           — one per authored PageRow
+//   N        last page                — LastPage.tsx, a fixed per-level image
 //
-// 2026-08-19 rework #2: pulled the PickAxe-specific "badge + grid" question
-// composition out into pdfMazeTypeRegistry.tsx's QuestionPanel, mirroring
-// the backend spike's QUESTION_TYPES dict — this page (and the backend's
-// compose_question_page) now have zero PickAxe-specific layout knowledge,
-// just "arrange N of whatever this maze type's question unit is." Also
-// added the single-question preview mode below, matching the backend's
-// `--preview-question` flag — a new maze type's question design can be
-// built and checked in isolation before it's ever arranged onto a sheet.
+// 2026-08-21 rework #4 — the owner's content-production process, which fixes
+// both static pages so they are authored once per maze type / per level and
+// then reused by every sheet:
+//
+//   * The cover moved out of this file into CoverPage.tsx and is now built on
+//     the designer's actual vector template instead of markup that approximated
+//     it. Its tutorial mazes are fixed constants (coverTutorial.ts), not data.
+//   * The hand-coded Bonus page moved out into LastPage.tsx and is now the
+//     designer's supplied full-bleed A4 image for the sheet's level.
+//   * **Every row in `pages[]` is a question page.** This used to be
+//     `pages.slice(1)`, because `pages[0]` was a "cover row" whose question fed
+//     the cover illustration. Now that the cover's tutorial is fixed, consuming
+//     pages[0] that way would silently drop an authored question from the
+//     output. The Level Dashboard still labels row 0 "Cover / Tutorial" — that
+//     label is now stale and is a known follow-up, out of scope here.
+//
+// Earlier reworks, for context: #1 rebuilt the maze panels against
+// pdf_design_spec.md's measured sample (WallGrid/icons.tsx) after the first pass
+// used a dotted background grid and emoji; #2 pulled the PickAxe-specific
+// "badge + grid" composition out into pdfMazeTypeRegistry.tsx's QuestionPanel,
+// so this file has zero maze-type-specific layout knowledge; #3 swapped
+// hand-drawn icons for the designer's real vectors.
 
-// level_dashboard_pagination_spec.md §4.4 — `isBonus` is a manual per-row
-// flag now, not computed from star rating (pdf_design_spec.md §7's laurel
-// wreath replaces the plain box entirely on a Bonus row, it doesn't overlay
-// on top of it).
-// Page-numbering rule: odd pages sit top-left, even pages top-right
-// (per-project print convention, confirmed 2026-08-19 against the real
-// output — not derivable from the sample, a direct rule from the owner).
-// 2026-08-19: rendered 2x the original h-12/w-12 size (owner review of
-// hybrid_question.pdf) — viewBox/internal geometry unchanged, both the
-// plain box and the laurel-wreath variant share this wrapper so both scale
-// together.
+// level_dashboard_pagination_spec.md §4.4 — `isBonus` is a manual per-row flag,
+// not computed from star rating (pdf_design_spec.md §7's laurel wreath replaces
+// the plain box entirely on a Bonus row, it doesn't overlay on top of it).
+// Page-numbering rule: odd pages sit top-left, even pages top-right (per-project
+// print convention, confirmed 2026-08-19 against the real output — not derivable
+// from the sample, a direct rule from the owner).
 function PageNumberBadge({ number, isBonus }: { number: number; isBonus: boolean }) {
   const alignClass = number % 2 === 0 ? 'ml-auto' : ''
   const badgeClass = `mb-4 block h-24 w-24 ${alignClass}`
@@ -73,13 +78,29 @@ function PageNumberBadge({ number, isBonus }: { number: number; isBonus: boolean
   )
 }
 
+// Every sheet page is exactly A4 and carries its own padding, because @page's
+// margin is now 0 (see printStyle). It used to be `@page { margin: 10mm }` with
+// 210mm-wide page elements inside it, which overflowed the 190mm printable
+// width and left Chromium to scale the result. Content box is unchanged at
+// 190mm x 277mm.
+const SHEET: CSSProperties = { width: '210mm', height: '297mm', boxSizing: 'border-box' }
+
 export default function PdfPreviewSpikePage() {
   const [answerKey, setAnswerKey] = useState(false)
   const [previewIndex, setPreviewIndex] = useState<number | 'sheet'>('sheet')
   const fixture = useMemo(readFixture, [])
 
-  const coverQuestion = fixture.pages[0].questions[0]
-  const questionPages = fixture.pages.slice(1)
+  // Both static pages load asynchronously — the cover fetches the SVG template,
+  // the last page decodes a ~1MB JPEG — and both finish after `load` and after
+  // `networkidle`. `data-pdf-ready` below is the signal pdf-service waits on;
+  // printing earlier yields a cover with no template and a blank final page.
+  // useCallback keeps these stable so CoverPage's onReady effect doesn't re-run
+  // on every render.
+  const [coverReady, setCoverReady] = useState(false)
+  const [lastPageReady, setLastPageReady] = useState(false)
+  const handleCoverReady = useCallback(() => setCoverReady(true), [])
+  const handleLastPageReady = useCallback(() => setLastPageReady(true), [])
+
   const allQuestions = useMemo(() => fixture.pages.flatMap((p) => p.questions), [fixture])
 
   const toolbar = (
@@ -114,17 +135,15 @@ export default function PdfPreviewSpikePage() {
     </div>
   )
 
-  // Shared print/screen CSS — hoisted above the branch below (rather than
-  // living only in the "full sheet" return) so a headless browser printing
-  // ANY view of this page (including the single-question preview) still
-  // hides the .no-print toolbar. Missing that on the single-question branch
-  // was a real bug caught while building the hybrid renderer spike: a
-  // headless-browser PDF of a "Question 3" preview was including the
-  // toolbar controls in the printed output.
+  // Shared print/screen CSS — hoisted above the branch below (rather than living
+  // only in the "full sheet" return) so a headless browser printing ANY view of
+  // this page still hides the .no-print toolbar. Missing that on the
+  // single-question branch was a real bug caught while building the hybrid
+  // renderer spike.
   const printStyle = (
     <style>{`
       @media print {
-        @page { size: A4; margin: 10mm; }
+        @page { size: A4; margin: 0; }
         .no-print { display: none !important; }
         .print-page { box-shadow: none !important; margin: 0 !important; page-break-after: always; }
         .print-page:last-child { page-break-after: auto; }
@@ -136,13 +155,14 @@ export default function PdfPreviewSpikePage() {
   )
 
   // Single-question preview — the per-maze-type unit in isolation, no
-  // page/badge-position/wreath chrome, no sheet context. Mirrors the
-  // backend's render_question_preview: build and check a maze type's
-  // question design on its own before it's arranged onto a sheet page.
+  // page/badge-position/wreath chrome, no sheet context. Mirrors the backend
+  // spike's render_question_preview: a new maze type's question design can be
+  // built and checked before it is ever arranged onto a sheet. Reports ready
+  // immediately: neither static page is rendered in this mode.
   if (previewIndex !== 'sheet') {
     const question = allQuestions[previewIndex]
     return (
-      <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0">
+      <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0" data-pdf-ready="true">
         {printStyle}
         {toolbar}
         <div className="print-page mx-auto w-96 rounded bg-white p-8 shadow">
@@ -153,86 +173,32 @@ export default function PdfPreviewSpikePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0">
+    <div
+      className="min-h-screen bg-slate-100 py-8 print:bg-white print:p-0"
+      data-pdf-ready={coverReady && lastPageReady ? 'true' : 'false'}
+    >
       {printStyle}
 
       {toolbar}
 
-      {/* Cover / Direction page */}
-      <div className="print-page min-h-[277mm] w-[210mm] border-2 bg-white p-[10mm]" style={{ borderColor: INK }}>
-        <div className="flex items-baseline justify-between border-b pb-2" style={{ borderColor: INK }}>
-          <div>
-            <div className="text-[9px]" style={{ color: INK }}>
-              Think! Think!
-            </div>
-            <div className="text-xl font-bold leading-tight" style={{ color: INK }}>
-              Think!
-              <br />
-              Think!
-            </div>
-          </div>
-          <span className="text-sm" style={{ color: INK }}>
-            Name: <span className="border-b border-dashed border-slate-400 pb-0.5">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-          </span>
-          <div className="border-l pl-4 text-right" style={{ borderColor: INK }}>
-            <div className="text-sm font-bold" style={{ color: INK }}>
-              {fixture.level.charAt(0).toUpperCase() + fixture.level.slice(1)}
-            </div>
-            <div className="text-xs font-bold text-slate-600">
-              {MONTH_NAMES[fixture.month - 1]} / Week{fixture.week}
-            </div>
-          </div>
-        </div>
+      <CoverPage
+        mazeType={fixture.mazeType}
+        level={fixture.level}
+        month={fixture.month}
+        week={fixture.week}
+        onReady={handleCoverReady}
+      />
 
-        <div className="mt-4 flex items-center justify-between px-4 py-5" style={{ backgroundColor: GRAY }}>
-          <span className="text-3xl font-bold text-white">Let&apos;s do it</span>
-          <svg viewBox="0 0 100 100" className="h-16 w-16">
-            <MascotBust cx={50} cy={50} size={80} />
-          </svg>
-        </div>
-
-        <div className="relative mt-4 rounded-2xl border-2 p-4 pt-6" style={{ borderColor: GRAY }}>
-          <span className="absolute -top-3 left-4 rounded-full px-3 py-1 text-xs font-bold text-white" style={{ backgroundColor: GRAY }}>
-            Direction
-          </span>
-          <p className="text-center text-sm font-bold" style={{ color: INK }}>
-            Let&apos;s break the walls with a pickaxe and reach the goal!
-          </p>
-          <div className="mt-4 flex items-start justify-center gap-10">
-            <div className="w-48">
-              {/* Reuses the same registered PickAxe question unit as every real
-                  question page — the cover's "correct example" is literally one
-                  instance of it with tutorialDecorations turned on, not a
-                  separately-coded illustration. */}
-              <QuestionPanel mazeType={fixture.mazeType} question={coverQuestion} size="small" answerKey={false} tutorialDecorations />
-            </div>
-            <div className="flex w-48 flex-col items-center justify-center gap-2">
-              <svg viewBox="0 0 60 60" className="h-14 w-14">
-                <circle cx={30} cy={30} r={26} fill={GRAY} />
-                <line x1={20} y1={20} x2={40} y2={40} stroke="white" strokeWidth={4} />
-                <line x1={20} y1={40} x2={40} y2={20} stroke="white" strokeWidth={4} />
-              </svg>
-              <p className="text-center text-xs font-bold" style={{ color: INK }}>
-                You can only break the same number of walls as the pickaxes you have.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Question pages, one per PageRow. This loop has NO PickAxe-specific
+      {/* Question pages, one per PageRow. This loop has NO maze-type-specific
           layout knowledge — QuestionPanel looks up whichever maze type's
           question unit is registered, and the flex column below just stacks
-          however many there are; unlike the backend spike's canvas, no
-          manual height bookkeeping is needed here to center/stack correctly,
-          the browser does that regardless of what a given maze type's panel
-          renders internally (see this spike's README for why that matters). */}
-      {questionPages.map((page, i) => {
-        const pageNumber = i + 1
+          however many there are; unlike the backend spike's canvas, no manual
+          height bookkeeping is needed here to center/stack correctly. */}
+      {fixture.pages.map((page, i) => {
         const size = page.questions.length === 1 ? 'large' : 'small'
         return (
-          <div key={page.pageId} className="print-page min-h-[277mm] w-[210mm] bg-white p-[10mm]">
-            <PageNumberBadge number={pageNumber} isBonus={page.isBonus} />
+          <div key={page.pageId} className="print-page bg-white" style={{ ...SHEET, padding: '10mm' }}>
+            <PageNumberBadge number={i + 1} isBonus={page.isBonus} />
             <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-10">
               {page.questions.map((question) => (
                 <QuestionPanel key={question.question_id} mazeType={fixture.mazeType} question={question} size={size} answerKey={answerKey} />
@@ -242,33 +208,7 @@ export default function PdfPreviewSpikePage() {
         )
       })}
 
-      {/* Bonus page */}
-      <div className="print-page flex min-h-[277mm] w-[210mm] flex-col items-center border-2 bg-white p-[10mm]" style={{ borderColor: INK }}>
-        <svg viewBox="0 0 220 50" className="mb-4 h-12 w-56 self-start">
-          <polygon points="0,0 200,0 185,25 200,50 0,50 15,25" fill={GRAY} />
-          <text x={100} y={30} textAnchor="middle" fontSize={16} fontWeight="bold" fill="white">
-            Bonus Challenge
-          </text>
-        </svg>
-        <h2 className="text-2xl font-bold" style={{ color: INK, WebkitTextStroke: '1.5px white', paintOrder: 'stroke' }}>
-          Be a mission maker!
-        </h2>
-        <p className="mt-1 flex items-center gap-3 text-sm font-bold" style={{ color: INK }}>
-          <span className="h-px w-8" style={{ backgroundColor: INK }} />
-          Let&apos;s create your own original mission!
-          <span className="h-px w-8" style={{ backgroundColor: INK }} />
-        </p>
-        <div className="mt-8 h-[84mm] w-full" />
-        <p className="text-lg font-bold" style={{ color: INK }}>
-          I did it!
-        </p>
-        {/* 2026-08-19: 4x the original h-24/w-24 size (owner review of
-            hybrid_question.pdf) — viewBox/internal size unchanged, only the
-            rendered box is scaled. */}
-        <svg viewBox="0 0 100 100" className="h-[384px] w-[384px]">
-          <MascotFull cx={50} cy={50} size={70} />
-        </svg>
-      </div>
+      <LastPage level={fixture.level as LevelName} onReady={handleLastPageReady} />
     </div>
   )
 }

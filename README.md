@@ -28,6 +28,14 @@ The difficulty rating is determined by:
 - The minimum number of moves required to solve the puzzle.
 - The estimated time a user would spend to solve it.
 
+## How work is sequenced
+
+**[`PRODUCTION_PROCESS.md`](PRODUCTION_PROCESS.md) is the canonical process** for this
+system: the ten per-maze-type stages (concept → rules → data shape → generator/validator
+→ app → renderers → front cover → last page) and then the per-worksheet loop, which is
+question authoring plus an assembly step with no design decisions left in it. Every other
+spec in the repo covers one stage of it; start there to find out which.
+
 ## Design and Templates
 
 The visual representation of the puzzles is a crucial component. 

@@ -26,6 +26,21 @@ export interface WallGridProps {
   path?: Point[] // draft.path, in cell coordinates — omit for a bare question panel
   wavy?: boolean // cover tutorial's hand-drawn stroke vs. the answer-key's plain line
   tutorialDecorations?: boolean // sparkle + pickaxe-bubble callouts — cover only, see icons.tsx
+  // Overrides the default responsive sizing. The cover (CoverPage.tsx) needs
+  // panels at exact pt sizes to line up with Front Cover.svg's coordinate
+  // system, and its page-width watermark is far wider than the default
+  // `max-w-md` cap allows — both pass `block h-full w-full` and size the
+  // wrapping element instead.
+  className?: string
+  // Draws the panel's thick outer frame (pdf_design_spec.md §6.1). On by
+  // default — every real question panel has it. The cover's watermark turns it
+  // off: blown up to the full page width that 1.6mm frame becomes a ~11pt pale
+  // grey rule spanning the whole sheet and hugging the page border, and since
+  // the Direction box masks the maze's interior, that rule is one of the few
+  // parts of the watermark still visible. It reads as a stray printing rule
+  // rather than as part of a maze. Owner's call, 2026-08-21: the scaled-up maze
+  // used as the watermark carries no outer border.
+  showBorder?: boolean
 }
 
 function wavyPathD(points: { x: number; y: number }[], amplitude: number) {
@@ -49,7 +64,9 @@ function wavyPathD(points: { x: number; y: number }[], amplitude: number) {
   return out.join(' ')
 }
 
-export default function WallGrid({ grid, path, wavy, tutorialDecorations }: WallGridProps) {
+const DEFAULT_CLASS = 'mx-auto block aspect-square w-full max-w-md'
+
+export default function WallGrid({ grid, path, wavy, tutorialDecorations, className = DEFAULT_CLASS, showBorder = true }: WallGridProps) {
   const height = grid.length
   const width = grid[0]?.length ?? 0
   const size = 100 // viewBox units — panel is always a square, scales via CSS
@@ -109,7 +126,7 @@ export default function WallGrid({ grid, path, wavy, tutorialDecorations }: Wall
       : []
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="mx-auto block aspect-square w-full max-w-md">
+    <svg viewBox={`0 0 ${size} ${size}`} className={className}>
       {pathCenters && pathCenters.length > 1 && (
         <path
           d={wavy ? wavyPathD(pathCenters, size * 0.018) : `M ${pathCenters.map((p) => `${p.x} ${p.y}`).join(' L ')}`}
@@ -121,7 +138,7 @@ export default function WallGrid({ grid, path, wavy, tutorialDecorations }: Wall
         />
       )}
 
-      <rect x={0} y={0} width={size} height={size} fill="none" stroke={GRAY} strokeWidth={borderW} />
+      {showBorder && <rect x={0} y={0} width={size} height={size} fill="none" stroke={GRAY} strokeWidth={borderW} />}
       {wallLines.map((l, i) => (
         <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={GRAY} strokeWidth={wallW} />
       ))}

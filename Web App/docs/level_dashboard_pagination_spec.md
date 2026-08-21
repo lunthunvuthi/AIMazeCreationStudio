@@ -48,6 +48,17 @@ export interface PageRow {
 }
 ```
 
+> **Stale as of 2026-08-21 — `pages[0]` is no longer a cover row.** The PDF cover's
+> tutorial mazes became fixed per-maze-type constants
+> (`spike/coverTutorial.ts`, `pdf_export_spec.md` §3), so the cover consumes no question
+> and **every** row in `pages[]` is a question page. The renderer was updated to match.
+> This doc's "pages[0] is always the cover/tutorial row" — §2.1's comment, §2.2, §2.3's
+> migration step 2, §3's "Row 0 (cover row)", §4.1, §4.3's cover-row exemption — plus
+> `LevelDashboardPage.tsx`'s locked "Cover / Tutorial" card and `levelStore.ts`'s
+> `startNewLevel` reserving `pages[0]`, are all still written the old way. Known
+> follow-up, deliberately not changed in the pass that built the cover. See
+> `PRODUCTION_PROCESS.md` §4.
+
 `isBonus` is new as of 2026-08-19 (§4.4) — see that section for the UI and rendering
 rule. It **replaces** `pdf_export_spec.md` §4.1's original plan to compute the
 laurel-wreath marker automatically from "does this row contain the sheet's highest star
