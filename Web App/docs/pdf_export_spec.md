@@ -284,7 +284,9 @@ description) is deleted — the supplied images *are* that page, rendered by the
 ## 6. Answer Key Variant
 
 Same page sequence and layout as §2-§5, with one addition per maze panel: the solution
-path (`MazeQuestion.solutionTrace`) drawn as a **plain, straight, ink-black** line
+path (`MazeQuestion.solutionTrace`) drawn as a **plain, straight, dark-grey** line
+(`#58595B` — owner override 2026-08-21 of the sample's measured ink black, so the route
+stays readable against the black Start figure; see `pdf_design_spec.md` §8) 
 connecting cell-centers from Start to Goal (matches the answer-key sample exactly — same
 panel, same badge, path overlaid, confirmed by direct comparison against the same
 panel's question-only rendering, `pdf_design_spec.md` §8). **Correction, found by

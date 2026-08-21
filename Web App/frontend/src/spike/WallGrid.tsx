@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { WizardGrid } from '../types/maze'
 import { findCell, wallBetween, type Point } from '../registry/pickaxe/wizardMaze'
-import { GRAY, INK, StartIcon, GoalIcon, SparkleIcon, BreakCallout } from './icons'
+import { GRAY, PATH_GRAY, StartIcon, GoalIcon, SparkleIcon, BreakCallout } from './icons'
 
 // pdf_design_spec.md §6 — the core maze-panel renderer. Replaces this spike's
 // first pass (PrintGrid/PrintCellRenderer, now deleted): that version drew a
@@ -20,6 +20,13 @@ import { GRAY, INK, StartIcon, GoalIcon, SparkleIcon, BreakCallout } from './ico
 const BORDER_W_FRAC = 1.6 / 80 // ~1.6mm border on an ~80mm panel
 const WALL_W_FRAC = 0.9 / 80
 const DOT_R_FRAC = 1.1 / 80
+
+// How far short of the Start and Goal cell centres the path stops, in cell
+// widths (project owner, 2026-08-21). Drawing all the way to the centre buried
+// the line under the Start figure and the Goal flag; stopping a quarter-cell out
+// leaves both icons sitting clear of it. Only the two ends are inset — every
+// interior vertex stays on its cell centre, so the path's shape is unchanged.
+const ENDPOINT_INSET = 0.25
 
 export interface WallGridProps {
   grid: WizardGrid
@@ -41,6 +48,21 @@ export interface WallGridProps {
   // rather than as part of a maze. Owner's call, 2026-08-21: the scaled-up maze
   // used as the watermark carries no outer border.
   showBorder?: boolean
+}
+
+// Moves `from` a quarter-cell towards `toward`. Moves are always orthogonal, so
+// exactly one of the two signs is non-zero — this yields the owner's
+// (±0.25, 0) / (0, ±0.25) offsets for the four directions.
+function insetTowards(
+  from: { x: number; y: number },
+  toward: { x: number; y: number },
+  cellW: number,
+  cellH: number,
+) {
+  return {
+    x: from.x + Math.sign(toward.x - from.x) * ENDPOINT_INSET * cellW,
+    y: from.y + Math.sign(toward.y - from.y) * ENDPOINT_INSET * cellH,
+  }
 }
 
 function wavyPathD(points: { x: number; y: number }[], amplitude: number) {
@@ -112,7 +134,16 @@ export default function WallGrid({ grid, path, wavy, tutorialDecorations, classN
   const start = findCell(grid, 'start')
   const goal = findCell(grid, 'goal')
 
-  const pathCenters = path?.map((p) => cellCenter(p.x, p.y))
+  // A solution trace runs Start -> Goal, so the first and last entries are
+  // always the two icon cells — inset both. Interior points are untouched.
+  const pathCenters = (() => {
+    const centers = path?.map((p) => cellCenter(p.x, p.y))
+    if (!centers || centers.length < 2) return centers
+    const out = [...centers]
+    out[0] = insetTowards(centers[0], centers[1], cellW, cellH)
+    out[out.length - 1] = insetTowards(centers[centers.length - 1], centers[centers.length - 2], cellW, cellH)
+    return out
+  })()
   const breakPoints =
     tutorialDecorations && path
       ? path.slice(0, -1).flatMap((a, i) => {
@@ -131,7 +162,7 @@ export default function WallGrid({ grid, path, wavy, tutorialDecorations, classN
         <path
           d={wavy ? wavyPathD(pathCenters, size * 0.018) : `M ${pathCenters.map((p) => `${p.x} ${p.y}`).join(' L ')}`}
           fill="none"
-          stroke={INK}
+          stroke={PATH_GRAY}
           strokeWidth={wavy ? size * 0.045 : borderW}
           strokeLinecap={wavy ? 'round' : 'square'}
           strokeLinejoin={wavy ? 'round' : 'miter'}

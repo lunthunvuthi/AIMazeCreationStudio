@@ -15,6 +15,18 @@
 
 export const INK = '#111111'
 export const GRAY = '#9D9F9E'
+// The ideal/solution path. Deliberately a third tone, between the near-black of
+// the Start/Goal figures and the light grey of the walls: drawn in INK the path
+// was indistinguishable from the character standing on it, which the project
+// owner flagged as confusing on 2026-08-21. This value is the same dark grey the
+// designer's own cover template uses for text (`Front Cover.svg`'s `#58595b`),
+// so it is not a new colour for the project.
+//
+// NOTE this is a deliberate deviation from the printed sample: pdf_design_spec.md
+// §8 measured the real answer key's path as ink-black. The owner asked for grey
+// in both the cover tutorial and the answer key after reviewing the rendered
+// PDFs, so the measured value is overridden on purpose, not by accident.
+export const PATH_GRAY = '#58595B'
 
 const SVG_BASE = '/components/svg'
 

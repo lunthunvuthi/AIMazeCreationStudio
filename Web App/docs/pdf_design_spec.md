@@ -61,10 +61,11 @@ colors used anywhere in the document):
 | Brand gray | `#9D9F9E` | 157,159,158 | maze outer border, wall lines, lattice dots, title banner fill, "Direction" pill fill |
 | Light gray | `#D1D3D2` | 209,211,210 | decorative background motif only (cover page road/mountain graphic) — cosmetic, see §4 |
 | White | `#FFFFFF` | 255,255,255 | page background, panel interior |
-| Answer-key path | `#111111` | 17,17,17 | solution-path overlay — **same ink black**, not a colored accent (see §8) |
+| Answer-key path | `#111111` measured; **`#58595B` as rendered** | 17,17,17 | solution-path overlay. The sample measures the same ink black as everything else, but the renderer deliberately draws it in a dark grey — owner override, 2026-08-21, see §8 |
 
 There is **no red/yellow/blue/green anywhere in the question or answer-key PDFs** —
-the entire template is grayscale (ink black + one brand gray + white). This is a
+the entire template is grayscale (ink black + one brand gray + white — plus the one
+deliberate addition noted in the path row above). This is a
 significant correction from `pdf_export_spec.md`'s original visual-estimate draft,
 which guessed an amber title banner and colored flag/star — the real sample is
 monochrome. The only non-gray content is the Hatenyan mascot, which is also solid
@@ -346,11 +347,25 @@ lighter/dotted line standing in for "open passage."
 ## 8. Answer-key variant
 
 - Identical page sequence and panel layout to §7, with exactly one addition per panel:
-  the solution path, drawn as a **plain, straight, ink-black** line of thickness
-  roughly matching the outer border (§6.1) or slightly heavier, connecting cell centers
-  from Start to Goal, with simple mitered/square corners at turns (**not** the cover
-  example's rounded "hand-drawn road" wavy stroke — that texture is specific to §5's
-  tutorial illustration).
+  the solution path, drawn as a **plain, straight** line of thickness roughly matching
+  the outer border (§6.1) or slightly heavier, running Start to Goal with simple
+  mitered/square corners at turns (**not** the cover example's rounded "hand-drawn road"
+  wavy stroke — that texture is specific to §5's tutorial illustration).
+- **Path colour — owner override, 2026-08-21.** The sample measures this line as the
+  same ink black (`#111111`) as everything else on the page, and the renderer drew it
+  that way until the owner reviewed the exported answer key: at that weight the path is
+  indistinguishable from the Start figure standing on it, so a child reading the answer
+  cannot tell the route from the character. It is now **dark grey `#58595B`** — the same
+  tone the designer's own cover template uses for text, so not a new colour for the
+  project, and dark enough to stay clearly separate from the light grey walls. The same
+  change applies to the cover's tutorial illustration (§5), since both go through one
+  renderer. This is a **deliberate deviation from the measured sample**; don't "correct"
+  it back to ink black on the strength of §0's measurements.
+- **Path endpoints stop short of the Start and Goal cell centres** — a quarter of a cell
+  out, along the direction of travel (owner, 2026-08-21). Drawing to the exact centre
+  buried the line's ends under the Start figure and the Goal flag. Interior vertices are
+  unchanged, still exactly on cell centres, so the route's shape is identical. The path
+  is drawn *before* the walls and icons, so it also renders behind them.
 - **No sparkle/burst markers and no pickaxe-bubble callouts on real answer-key
   panels** — confirmed by direct comparison against the question variant of the same
   panel (see §0's method): the only difference is the path line itself. This corrects
