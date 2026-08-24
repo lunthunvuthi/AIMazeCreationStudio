@@ -47,12 +47,13 @@ export interface MazeQuestion {
   }
 }
 
-// level_dashboard_pagination_spec.md §2.1 — one row of the exported PDF
-// (1-2 questions; always 1 for pages[0], the locked cover/tutorial row).
+// level_dashboard_pagination_spec.md §2.1 — one row of the exported PDF,
+// holding 1-2 questions. Every row is a question page, pages[0] included: it
+// was a locked cover/tutorial row until 2026-08-21, when the cover's tutorial
+// became a fixed constant that consumes no question.
 // `isBonus` (§4.4, added 2026-08-19) is a manual per-row flag controlling
 // whether that page's number box renders the laurel-wreath design
-// (pdf_design_spec.md §7) instead of the plain rectangle — always false for
-// pages[0], which has no page-number box at all.
+// (pdf_design_spec.md §7) instead of the plain rectangle.
 export interface PageRow {
   pageId: string
   questions: MazeQuestion[]

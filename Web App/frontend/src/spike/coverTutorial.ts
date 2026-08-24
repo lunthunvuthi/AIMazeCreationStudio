@@ -15,9 +15,9 @@
 // Consequence for the data model: because these are fixed, the cover no longer
 // consumes `LevelProgress.pages[0]`. Every authored row in `pages[]` is a
 // question page now (the owner's process: questions are pages 2..N-1, the cover
-// and the last page get appended at render time). The Level Dashboard still
-// labels row 0 "Cover / Tutorial" — that label is now wrong and is a known
-// follow-up, deliberately out of scope for this pass.
+// and the last page get appended at render time). The Level Dashboard was
+// brought in line on 2026-08-21 — it no longer renders row 0 as a locked
+// "Cover / Tutorial" card.
 
 import type { MazeData } from '../types/maze'
 

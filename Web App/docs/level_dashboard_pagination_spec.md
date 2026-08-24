@@ -15,13 +15,14 @@ project owner before writing this (§5.1, §6.2, §4.3) — noted inline as **(C
 A fourth, §4.4's manual "Bonus" toggle, was added the same day from a later, separate
 instruction from the project owner (also directly confirmed, not inferred).
 
-**Status (updated 2026-08-19):** the data model (§2: `PageRow`, `isBonus`, `formatVersion: 2`,
-the old-file migration) and a minimal row-list dashboard UI (§3/§4: cover row locked,
-in-row "+ Add question", "+ Add new page", the Bonus toggle) are **implemented**, in
+**Status (updated 2026-08-21):** the data model (§2: `PageRow`, `isBonus`,
+`formatVersion: 2`, the old-file migration) and the row-list dashboard UI (§3/§4: in-row
+"+ Add question", "+ Add new page", the Bonus toggle) are **implemented**, in
 `types/maze.ts`/`store/levelStore.ts`/`storage/fileAdapter.ts`/`LevelDashboardPage.tsx`.
+§6's Preview/Download buttons landed 2026-08-21. Row 0's lock was **removed** the same
+day — see §2.1's notice and §4.1.
 **Not implemented:** §5's drag-and-drop (swap/move questions between rows via
-`@dnd-kit`) and §6's Preview/Download buttons — today's Save Progress/Export JSON stay
-as they were. This was a deliberate scope cut for this pass, not an oversight.
+`@dnd-kit`) — a deliberate scope cut, not an oversight.
 
 ---
 
@@ -43,21 +44,26 @@ data-model change it requires.
 ```ts
 export interface PageRow {
   pageId: string           // stable id, independent of position — for React keys & DnD identity
-  questions: MazeQuestion[] // length 1 for the cover row (pages[0]); 1-2 for every other row
-  isBonus: boolean          // §4.4 — manual "Bonus" flag; always false for pages[0] (the cover row)
+  questions: MazeQuestion[] // 1-2, every row alike
+  isBonus: boolean          // §4.4 — manual "Bonus" flag, settable on every row
 }
 ```
 
-> **Stale as of 2026-08-21 — `pages[0]` is no longer a cover row.** The PDF cover's
-> tutorial mazes became fixed per-maze-type constants
+> **Resolved 2026-08-21 — `pages[0]` is no longer a cover row, in this doc or in the
+> code.** The PDF cover's tutorial mazes became fixed per-maze-type constants
 > (`spike/coverTutorial.ts`, `pdf_export_spec.md` §3), so the cover consumes no question
-> and **every** row in `pages[]` is a question page. The renderer was updated to match.
-> This doc's "pages[0] is always the cover/tutorial row" — §2.1's comment, §2.2, §2.3's
-> migration step 2, §3's "Row 0 (cover row)", §4.1, §4.3's cover-row exemption — plus
-> `LevelDashboardPage.tsx`'s locked "Cover / Tutorial" card and `levelStore.ts`'s
-> `startNewLevel` reserving `pages[0]`, are all still written the old way. Known
-> follow-up, deliberately not changed in the pass that built the cover. See
-> `PRODUCTION_PROCESS.md` §4.
+> and **every** row in `pages[]` is a question page. The renderer was updated first; the
+> store and dashboard followed in a second pass, which rewrote §2.1's comment, §2.2,
+> §2.3's migration step 2, §3, §4.1, §4.2, §4.3, §4.4's last bullet and §5's gesture 1.
+> Row 0 is now an ordinary row everywhere: `packQuestionsIntoPages` no longer emits a
+> `'cover'` row, `toggleRowBonus` and `removeQuestion` dropped their row-0 exemptions,
+> and `LevelDashboardPage.tsx` renders one uniform loop over `pages[]`.
+>
+> That second pass also fixed a page-numbering bug the locked row had been hiding: the
+> dashboard looped over `pages.slice(1)` while labelling rows `Page {i + 1}`, so every
+> row was labelled one lower than the number the renderer stamps on it (which counts
+> `i + 1` over all of `pages[]`). No save-file format bump was needed — an existing
+> `formatVersion: 2` file's `'cover'` row is a valid ordinary 1-question row.
 
 `isBonus` is new as of 2026-08-19 (§4.4) — see that section for the UI and rendering
 rule. It **replaces** `pdf_export_spec.md` §4.1's original plan to compute the
@@ -75,7 +81,7 @@ export interface LevelProgress {
   year: number
   month: number
   week: number
-  pages: PageRow[]          // pages[0] is always the cover/tutorial row (§4.1)
+  pages: PageRow[]          // one question page per row, pages[0] included (§4.1)
   createdAt: string
   updatedAt: string
 }
@@ -93,18 +99,19 @@ in `handoffs/handoff-2026-08-18-2321.md` — don't repeat that pattern here).
 and migrate on load:
 
 1. Take the sheet's existing flat `questions[]`.
-2. Its first question becomes `pages[0]` alone (the cover/tutorial row).
+2. Its first question becomes `pages[0]` alone.
 3. Pack the remaining questions into rows of 2, in their existing array order, as
    `pages[1..]`.
 4. Every migrated row gets `isBonus: false` (§4.4) — there's no prior data to infer it
    from, and the user can toggle it on per row immediately after loading.
 5. Re-save under `formatVersion: 2` the next time the user exports.
 
-**(ASSUMPTION)** — step 2 assumes `questions[0]` is the tutorial question (true today,
-since `startNewLevel` always builds the 1★ tutorial first per `development_plan.md`
-§6.4). This is a one-time reflow of *old* save files only; the user can immediately
-rearrange the result via drag-and-drop, so a slightly-wrong initial grouping is cheap to
-fix, not a data-loss risk.
+Step 2's solo first row is a **seeding default, not a rule** (updated 2026-08-21 — it
+used to be the locked cover row). `startNewLevel` uses the same packing, and it is kept
+because `development_plan.md` §6.4 builds the 1★ tutorial first and a question alone on
+a page renders as a `large` panel — the sheet layout the owner reviewed and approved.
+Row 0 is otherwise an ordinary row and can be paired, re-rated, emptied or deleted, so a
+slightly-wrong initial grouping is cheap to fix, not a data-loss risk.
 
 ### 2.4 `question_id` occurrence counting
 
@@ -121,10 +128,8 @@ the `-2` in `kinder-3star-2`). With `pages[]`, this needs a
 Replace the `grid grid-cols-2 sm:grid-cols-3` question grid with a **vertical list of
 page rows**, each rendered full-width, in `pages[]` order:
 
-- **Row 0 (cover row):** visually distinct (e.g. a header-styled card) — shows it holds
-  the tutorial question, no drag handle, no remove control, no second-question slot.
-  Rendered from `pages[0].questions[0]` using the existing `QuestionSlotCard`.
-- **Rows 1..N:** each shows 1 or 2 `QuestionSlotCard`s side-by-side (or stacked on
+- **Every row (2026-08-21 — no special-cased row 0):** each shows 1 or 2
+  `QuestionSlotCard`s side-by-side (or stacked on
   narrow viewports), a small "Page N" label (N = the row's 1-based index within
   `pages[]`, matching `pdf_export_spec.md` §4.1's page numbering) with a **"Bonus"
   toggle right next to it** (§4.4, new 2026-08-19), and — only when the row currently
@@ -143,43 +148,48 @@ page rows**, each rendered full-width, in `pages[]` order:
 
 ## 4. Page Row Rules
 
-### 4.1 Cover row is fixed **(CONFIRMED)**
+### 4.1 Row 0 is an ordinary row **(supersedes 2026-08-19's locked cover row)**
 
-Row 0 is not part of the drag-and-drop system at all: its question can never be dragged
-out, and no other question can be dropped into it. It always holds exactly one
-question — the tutorial. No "+ Add question" slot, no Remove control, no drop target
-behavior. This sidesteps any "cover row becomes empty" edge case entirely, at the cost
-of the tutorial question being permanently un-editable-in-position (its star/content can
-still presumably be changed via its own difficulty selector, same as before — that part
-is unchanged from today's `QuestionSlotCard`).
+There is no locked row. Row 0 takes the same controls as every other row — page number,
+Bonus toggle, Remove, "+ Add question", and (once §5 is built) drag in and out — and it
+self-deletes when emptied like the rest (§4.3).
+
+> **What this section used to say, and why it changed.** Row 0 was originally fixed:
+> outside the drag-and-drop system, exactly one question, no Remove and no "+ Add
+> question" slot, which sidestepped any "cover row becomes empty" edge case. That lock
+> only existed because the PDF cover's tutorial illustration was drawn from
+> `pages[0].questions[0]`, so losing or moving that question would have broken the
+> cover. The cover's tutorial is a fixed per-maze-type constant now
+> (`spike/coverTutorial.ts`, `pdf_export_spec.md` §3) and consumes no question, so the
+> lock protected nothing while still hiding controls that apply to row 0 and holding
+> `isBonus` unreachable on it — and it concealed the page-numbering bug described in
+> §2.1's notice. The "cover row becomes empty" case it sidestepped is now just §4.3's
+> ordinary self-delete.
 
 ### 4.2 Row capacity
 
-- Row 0: exactly 1, always.
-- All other rows: 1 or 2. A row showing 2 questions hides its "+ Add question" slot
-  (§3).
+- Every row: 1 or 2. A row showing 2 questions hides its "+ Add question" slot (§3).
+  Row 0 was capped at exactly 1 until 2026-08-21 (§4.1).
 
 ### 4.3 Empty rows self-delete **(CONFIRMED interpretation)**
 
-Any row other than row 0 that drops to 0 questions (its only or last question dragged
-elsewhere) is removed from `pages[]` immediately — no empty placeholder row is ever
-rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
+Any row that drops to 0 questions — its only or last question removed or dragged
+elsewhere, row 0 included since 2026-08-21 (§4.1) — is removed from `pages[]`
+immediately — no empty placeholder row is ever rendered or persisted. Because `pages[]` is a plain ordered array (not indexed by a
 separate page-number field), removing a row automatically renumbers everything after it
 — no explicit reindexing step needed.
 
 ### 4.4 "Bonus" toggle per row (added 2026-08-19, from the project owner's description)
 
-Each row other than row 0 gets a **"Bonus" trigger** — a small toggle/checkbox next to
-that row's "Page N" label (§3) — bound to `PageRow.isBonus` (§2.1).
+Each row gets a **"Bonus" trigger** — a small toggle/checkbox next to that row's
+"Page N" label (§3) — bound to `PageRow.isBonus` (§2.1). Row 0 was excluded until
+2026-08-21 (§4.1).
 
 - **Off (default):** the exported page's page-number box renders as the plain
   hairline-bordered rectangle (`pdf_design_spec.md` §7).
 - **On:** the page-number box renders with the **laurel design** instead —
   `pdf_design_spec.md` §7's laurel wreath (`symbol-19.svg`, `pdf_design_spec.md` §12.1)
   wrapped around that row's number.
-- Row 0 (the cover row) never shows this toggle and `isBonus` is always `false` for it —
-  it has no page-number box at all (§4.1's numbering starts at the first question row,
-  matching `pdf_export_spec.md` §4.1).
 
 **This replaces the previous plan** (`pdf_export_spec.md` §4.1, `pdf_design_spec.md`
 §7) to compute the laurel marker automatically from "does this row contain the sheet's
@@ -198,9 +208,9 @@ plus two supporting ones. Concretely, three drag gestures cover everything descr
 
 1. **Drag a question onto another question's card** → the two swap positions (their
    `PageRow`s exchange that question). Works within the same row or across rows. Row
-   question-counts never change, so this never triggers §4.3's auto-delete and never
-   needs to touch row 0's lock (row 0 is excluded from being either side of a swap, per
-   §4.1).
+   question-counts never change, so this never triggers §4.3's auto-delete. Row 0 is a
+   valid side of a swap like any other row — it was excluded while it was locked, until
+   2026-08-21 (§4.1).
 2. **Drag a question onto an empty "+ Add question" slot** in a row that currently has
    1 question → moves the dragged question into that row as its second question,
    removing it from its original row (which may then self-delete per §4.3 if that was
@@ -293,8 +303,10 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
 - `Web App/frontend/src/pages/LevelDashboardPage.tsx` — replace the grid with the
   page-row list (§3); new Preview/Download buttons (§6.1).
 - New component(s): a `PageRowCard` (or similar) wrapping 1-2 `QuestionSlotCard`s per
-  row; the cover row likely reuses `QuestionSlotCard` directly with drag disabled.
-  `AddQuestionCard` is reused as-is inside a row (§3) — no changes expected there.
+  row. Not built — every row is rendered inline by one uniform loop in
+  `LevelDashboardPage.tsx`, which is short enough not to need extracting yet; revisit
+  when §5's drag state lands. `AddQuestionCard` is reused as-is inside a row (§3) — no
+  changes expected there.
 - `Web App/frontend/package.json` — new drag-and-drop dependency (§5.2).
 
 ---

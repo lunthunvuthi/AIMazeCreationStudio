@@ -44,10 +44,13 @@ const BASE_URL = 'http://localhost:5173/spike/pdf-preview'
 
 // Deliberately minimal — not a full re-implementation of fileAdapter.ts's
 // parseLevelProgressFile (formatVersion migration, field defaulting). Just
-// enough to fail fast with a clear message on the one shape the page
-// actually dereferences unconditionally (PdfPreviewSpikePage.tsx's
-// `fixture.pages[0].questions[0]` cover-question lookup), rather than a
-// TypeError deep inside React with no indication which input file caused it.
+// enough to fail fast with a clear message on an input that cannot produce a
+// usable sheet, rather than a silent blank render with no indication which
+// input file caused it. (Until 2026-08-21 this guarded a real unconditional
+// dereference — PdfPreviewSpikePage.tsx's `fixture.pages[0].questions[0]`
+// cover-question lookup; the cover's tutorial is a fixed constant now and the
+// page only maps over `pages[]`, so the pages[0] check is just a fail-fast on
+// an empty first row, which the dashboard no longer produces either.)
 async function loadFixtureData(dataPath) {
   const raw = await readFile(path.resolve(dataPath), 'utf-8')
   let parsed

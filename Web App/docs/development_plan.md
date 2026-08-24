@@ -204,11 +204,13 @@ should not require touching the landing page, routing, or save/load logic.
 ### 6.5 Level Dashboard
 
 **Superseded by `level_dashboard_pagination_spec.md` (2026-08-19):** the flat
-question-grid layout described below is being replaced by a page-row list (1-2
-questions per row, drag-and-drop reorder/swap, a locked cover row, and new
-Preview/Download actions) so the dashboard directly authors the PDF page structure from
-`pdf_export_spec.md`. That doc is spec-only so far (no code changes yet) — the
-description below still reflects what's actually built today.
+question-grid layout described below was replaced by a page-row list (1-2 questions per
+row, plus Preview/Download actions) so the dashboard directly authors the PDF page
+structure from `pdf_export_spec.md`. **Status (2026-08-21):** the row list, the per-row
+Bonus toggle and Preview/Download are all built; drag-and-drop reorder/swap is the one
+part still outstanding. The page-row list originally kept row 0 as a *locked* cover row —
+that lock was removed 2026-08-21 (that doc's §4.1), so every row is an ordinary question
+page. Treat the bullets below as historical: they describe the flat grid this replaced.
 
 - Shows all slots (e.g. as a star-labeled grid/list) with status badges: Empty /
   In Progress / Complete, each rendered with the simple visual style from

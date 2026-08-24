@@ -27,14 +27,24 @@ function buildEmptyQuestions(mazeTypeId: string, level: LevelName): MazeQuestion
   })
 }
 
-// level_dashboard_pagination_spec.md §2.3 — first question becomes the
-// locked cover row alone, the rest pack into rows of 2 in order. Used both
-// for a brand-new level (development_plan.md §6.4 always builds the 1★
-// tutorial first, so it lands in pages[0] here same as it always has) and by
-// fileAdapter.ts's formatVersion-1 migration.
+// level_dashboard_pagination_spec.md §2.3 — the first question starts alone in
+// row 0, the rest pack into rows of 2 in order. Used both for a brand-new level
+// and by fileAdapter.ts's formatVersion-1 migration.
+//
+// 2026-08-21: row 0 used to be a *locked* cover row, because the PDF cover's
+// tutorial illustration was drawn from its question. The cover's tutorial is a
+// fixed per-maze-type constant now (spike/coverTutorial.ts) and consumes no
+// question, so every row here is an ordinary question page and row 0 gets no
+// special treatment anywhere in the store or the dashboard.
+//
+// The solo first row survives only as a *seeding default*: development_plan.md
+// §6.4 builds the 1★ tutorial first, and a question alone on a page renders as
+// a `large` panel, which is the reviewed-and-approved sheet layout. It is a
+// starting point, not an invariant — row 0 can be paired, re-rated, emptied or
+// deleted like any other row.
 export function packQuestionsIntoPages(questions: MazeQuestion[]): PageRow[] {
   if (questions.length === 0) return []
-  const pages: PageRow[] = [{ pageId: 'cover', questions: [questions[0]], isBonus: false }]
+  const pages: PageRow[] = [{ pageId: 'page-0', questions: [questions[0]], isBonus: false }]
   for (let i = 1; i < questions.length; i += 2) {
     pages.push({ pageId: `page-${pages.length}`, questions: questions.slice(i, i + 2), isBonus: false })
   }
@@ -150,17 +160,18 @@ export const useLevelStore = create<LevelStore>((set) => ({
       }
     }),
 
-  // level_dashboard_pagination_spec.md §4.4 — manual "Bonus" toggle. Never
-  // called for pages[0] (the dashboard doesn't render the control there),
-  // but guarded anyway since it's a cheap invariant to hold.
+  // level_dashboard_pagination_spec.md §4.4 — manual "Bonus" toggle, valid on
+  // every row including row 0. It used to skip pages[0] while that was the
+  // locked cover row; the renderer has always honoured pages[0].isBonus, so the
+  // guard only ever made the flag unreachable from the UI.
   toggleRowBonus: (pageId) =>
     set((state) => {
       if (!state.current) return state
       return {
         current: {
           ...state.current,
-          pages: state.current.pages.map((page, i) =>
-            page.pageId === pageId && i !== 0 ? { ...page, isBonus: !page.isBonus } : page,
+          pages: state.current.pages.map((page) =>
+            page.pageId === pageId ? { ...page, isBonus: !page.isBonus } : page,
           ),
           updatedAt: new Date().toISOString(),
         },
@@ -191,15 +202,17 @@ export const useLevelStore = create<LevelStore>((set) => ({
       }
     }),
 
-  // Removes the question wherever it lives, then drops its row if that was
-  // the row's only question and it isn't pages[0] (level_dashboard_
-  // pagination_spec.md §4.3 — empty rows self-delete, cover row is exempt).
+  // Removes the question wherever it lives, then drops its row if that was the
+  // row's only question (level_dashboard_pagination_spec.md §4.3 — empty rows
+  // self-delete). Row 0 was exempt while it was the locked cover row, which
+  // could leave a questionless row in pages[] and so an empty page in the PDF;
+  // it is an ordinary row now and self-deletes with the rest.
   removeQuestion: (questionId) =>
     set((state) => {
       if (!state.current) return state
       const pages = state.current.pages
         .map((page) => ({ ...page, questions: page.questions.filter((q) => q.question_id !== questionId) }))
-        .filter((page, i) => i === 0 || page.questions.length > 0)
+        .filter((page) => page.questions.length > 0)
       return {
         current: {
           ...state.current,

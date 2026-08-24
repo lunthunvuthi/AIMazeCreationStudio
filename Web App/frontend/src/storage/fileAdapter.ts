@@ -35,6 +35,12 @@ export function downloadLevelProgress(progress: LevelProgress): void {
 // (no per-question validation beyond "it's an array" — same laxity the
 // original formatVersion-1 parser had, this migration doesn't newly
 // introduce it).
+//
+// No format bump was needed when the locked cover row was removed on
+// 2026-08-21: an existing formatVersion-2 file's `pageId: 'cover'` row holds one
+// question, which is a valid ordinary row under the new model. It keeps that
+// literal id (ids are opaque React/DnD keys, never positional) and behaves like
+// any other row.
 function migrateFormatVersion1(data: Record<string, unknown>): PageRow[] {
   if (!Array.isArray(data.questions)) {
     throw new Error('That file is not a valid level progress file.')
