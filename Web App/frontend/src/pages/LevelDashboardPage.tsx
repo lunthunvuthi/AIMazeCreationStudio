@@ -1,18 +1,36 @@
 import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type { Announcements, DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { getMazeType } from '../registry/mazeTypes'
 import { useLevelStore } from '../store/levelStore'
-import QuestionSlotCard from '../components/QuestionSlotCard'
 import AddQuestionCard from '../components/AddQuestionCard'
+import DashboardDropZone from '../components/DashboardDropZone'
+import DraggableQuestionSlot from '../components/DraggableQuestionSlot'
+import {
+  ADD_SLOT_DROP_ID,
+  NEW_PAGE_DROP_ID,
+  asDropData,
+  asQuestionDrag,
+} from '../components/dashboardDnd'
+import type { QuestionDragData } from '../components/dashboardDnd'
 import { buildExportFilename, downloadBlob, downloadLevelProgress } from '../storage/fileAdapter'
 import { renderPdf } from '../api/pdfApi'
 import { flattenPages, MONTH_NAMES } from '../types/maze'
 import type { MazeQuestion } from '../types/maze'
 
 // level_dashboard_pagination_spec.md §3 — page-row list replacing the old
-// flat 3-column question grid. §5's drag-and-drop reordering (swap/move
-// questions between rows) is NOT implemented yet — rows are otherwise fully
-// functional (add/remove/re-rate/Bonus toggle), just not draggable yet.
+// flat 3-column question grid. §5's drag-and-drop landed 2026-08-26: each
+// question card carries a grip, and the three gestures route to the three
+// store actions in handleDragEnd below. Whole-row dragging stays out of scope
+// per §5.1 — only individual questions move.
 //
 // 2026-08-21: every row in pages[] is now an ordinary question page, rendered
 // by one uniform loop. Row 0 used to render as a locked "Cover / Tutorial"
@@ -31,10 +49,30 @@ export default function LevelDashboardPage() {
   const toggleRowBonus = useLevelStore((s) => s.toggleRowBonus)
   const setQuestionStar = useLevelStore((s) => s.setQuestionStar)
   const removeQuestion = useLevelStore((s) => s.removeQuestion)
+  const swapQuestions = useLevelStore((s) => s.swapQuestions)
+  const moveQuestionToRow = useLevelStore((s) => s.moveQuestionToRow)
+  const moveQuestionToNewPage = useLevelStore((s) => s.moveQuestionToNewPage)
 
+  // What is currently in the air, tracked here rather than read off
+  // useDndContext() because two separate things need it: the DragOverlay's
+  // contents, and deciding which drop zones are inert for this particular
+  // question (see the `disabled` props below).
+  const [activeDrag, setActiveDrag] = useState<QuestionDragData | null>(null)
   const [isRendering, setIsRendering] = useState(false)
   const [previewedSnapshot, setPreviewedSnapshot] = useState<string | null>(null)
   const [previewedBlob, setPreviewedBlob] = useState<Blob | null>(null)
+
+  const sensors = useSensors(
+    // A 5px threshold rather than an instant grab. The grip lives inside a card
+    // whose body is a Link to the wizard and whose footer has a Remove button —
+    // a pointerdown that never moves has to stay a plain click.
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // Keyboard dragging: Space/Enter on a grip picks the question up, arrow keys
+    // move the drag position in dnd-kit's default 25px steps, Space/Enter drops,
+    // Escape cancels. Coarse, but it means every gesture below is reachable
+    // without a pointer.
+    useSensor(KeyboardSensor),
+  )
 
   if (!mazeType) return <Navigate to="/" replace />
   if (!current || current.mazeType !== mazeType.id) return <Navigate to={`/${mazeType.id}/new`} replace />
@@ -60,6 +98,82 @@ export default function LevelDashboardPage() {
     }
     setQuestionStar(question.question_id, star)
   }
+
+  // level_dashboard_pagination_spec.md §5. This routes and nothing more: each
+  // droppable declares what it is, and the matching store action owns every
+  // guard that protects the data model (capacity, no-op drops, §4.3's
+  // self-delete). Keeping the rules there means a drop and the equivalent
+  // click-driven edit cannot diverge.
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDrag(asQuestionDrag(event.active.data.current))
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDrag(null)
+    const dragged = asQuestionDrag(event.active.data.current)
+    const target = asDropData(event.over?.data.current)
+    if (!dragged || !target) return
+    if (target.kind === 'question') {
+      swapQuestions(dragged.questionId, target.questionId)
+    } else if (target.kind === 'addSlot') {
+      moveQuestionToRow(dragged.questionId, target.pageId)
+    } else {
+      moveQuestionToNewPage(dragged.questionId)
+    }
+  }
+
+  // Page numbers are 1-based over pages[] here exactly as they are in the row
+  // labels and in the renderer — see the note on the row list below.
+  const pageNumberOf = (pageId: string) => current.pages.findIndex((row) => row.pageId === pageId) + 1
+
+  const describeQuestion = (questionId: string) => {
+    const question = allQuestions.find((q) => q.question_id === questionId)
+    return question ? `${question.difficulty_star}-star question` : 'question'
+  }
+
+  const describeDrop = (data: Record<string, unknown> | undefined) => {
+    const target = asDropData(data)
+    if (!target) return null
+    if (target.kind === 'question') {
+      return `the ${describeQuestion(target.questionId)} on page ${pageNumberOf(target.pageId)}`
+    }
+    if (target.kind === 'addSlot') return `the free slot on page ${pageNumberOf(target.pageId)}`
+    return 'a new page at the end'
+  }
+
+  // dnd-kit's default announcements read out raw droppable ids, which here are
+  // question_ids like "kinder-3star-2" — accurate but unusable aloud. These say
+  // what the drop would actually do instead.
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      `Picked up the ${describeQuestion(String(active.id))}. Use the arrow keys to move it over another question, a free slot, or Add new page.`,
+    onDragOver: ({ active, over }) => {
+      // A card is its own drop target (that's how gesture 1's swap works), so a
+      // question is already "over" itself the instant it is picked up. Saying so
+      // would wipe out the pickup instructions above before they were read —
+      // returning undefined leaves them standing instead.
+      if (over?.id === active.id) return undefined
+      if (!over) return 'Not over a drop target.'
+      const where = describeDrop(over.data.current)
+      return where ? `Over ${where}.` : 'Not over a drop target.'
+    },
+    onDragEnd: ({ active, over }) => {
+      const what = describeQuestion(String(active.id))
+      if (!over || over.id === active.id) return `Dropped the ${what} where it was. Nothing changed.`
+      const where = describeDrop(over.data.current)
+      return where ? `Moved the ${what} to ${where}.` : `Dropped the ${what} outside any target. Nothing changed.`
+    },
+    onDragCancel: ({ active }) => `Cancelled. The ${describeQuestion(String(active.id))} stayed where it was.`,
+  }
+
+  const draggedRowIndex = activeDrag ? current.pages.findIndex((row) => row.pageId === activeDrag.pageId) : -1
+  // Gesture 3 would rebuild an identical sheet when the dragged question is
+  // already alone on the last row, so that target goes inert — the store
+  // rejects the move anyway, this just stops it looking droppable.
+  const newPageDropDisabled =
+    !activeDrag ||
+    (draggedRowIndex === current.pages.length - 1 &&
+      current.pages[draggedRowIndex]?.questions.length === 1)
 
   function handleRemove(question: MazeQuestion) {
     if (question.maze && !window.confirm('This question already has a maze. Remove it anyway?')) {
@@ -195,54 +309,87 @@ export default function LevelDashboardPage() {
         </label>
       </div>
 
-      <div className="mt-8 flex flex-col gap-4">
-        {/* One row per PageRow, no special-cased first row. "Page {i + 1}"
-            matches the number the renderer stamps on that row's page —
-            PdfPreviewSpikePage.tsx numbers fixture.pages as i + 1 over the same
-            array, so these two indices have to be read off pages[] identically. */}
-        {current.pages.map((row, i) => (
-          <div key={row.pageId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-3">
-              <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600">
-                Page {i + 1}
-              </span>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                <input
-                  type="checkbox"
-                  checked={row.isBonus}
-                  onChange={() => toggleRowBonus(row.pageId)}
-                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
-                />
-                Bonus
-              </label>
+      <DndContext
+        sensors={sensors}
+        accessibility={{ announcements }}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDrag(null)}
+      >
+        <div className="mt-8 flex flex-col gap-4">
+          {/* One row per PageRow, no special-cased first row. "Page {i + 1}"
+              matches the number the renderer stamps on that row's page —
+              PdfPreviewSpikePage.tsx numbers fixture.pages as i + 1 over the same
+              array, so these two indices have to be read off pages[] identically. */}
+          {current.pages.map((row, i) => (
+            <div key={row.pageId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600">
+                  Page {i + 1}
+                </span>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                  <input
+                    type="checkbox"
+                    checked={row.isBonus}
+                    onChange={() => toggleRowBonus(row.pageId)}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+                  />
+                  Bonus
+                </label>
+              </div>
+              <div className="grid grid-cols-2 items-stretch gap-4 sm:grid-cols-3">
+                {row.questions.map((question) => (
+                  <DraggableQuestionSlot
+                    key={question.question_id}
+                    mazeTypeId={mazeType.id}
+                    question={question}
+                    pageId={row.pageId}
+                    starOptions={starOptions}
+                    onChangeStar={(star) => handleChangeStar(question, star)}
+                    onRemove={() => handleRemove(question)}
+                  />
+                ))}
+                {/* §4.2 — the free-slot drop target only exists while the row
+                    holds exactly 1 question, which is the same condition that
+                    shows the "+ Add question" card. Dropping a question back
+                    into its own row is a no-op, so that case goes inert. */}
+                {row.questions.length === 1 && (
+                  <DashboardDropZone
+                    id={ADD_SLOT_DROP_ID(row.pageId)}
+                    data={{ kind: 'addSlot', pageId: row.pageId }}
+                    disabled={!activeDrag || activeDrag.pageId === row.pageId}
+                  >
+                    <AddQuestionCard starOptions={starOptions} onAdd={(star) => addQuestionToRow(row.pageId, star)} />
+                  </DashboardDropZone>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {row.questions.map((question) => (
-                <QuestionSlotCard
-                  key={question.question_id}
-                  mazeTypeId={mazeType.id}
-                  question={question}
-                  starOptions={starOptions}
-                  onChangeStar={(star) => handleChangeStar(question, star)}
-                  onRemove={() => handleRemove(question)}
-                />
-              ))}
-              {row.questions.length === 1 && (
-                <AddQuestionCard starOptions={starOptions} onAdd={(star) => addQuestionToRow(row.pageId, star)} />
-              )}
-            </div>
-          </div>
-        ))}
+          ))}
 
-        <button
-          type="button"
-          onClick={() => addNewPage(3)}
-          className="flex items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 p-4 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-500"
-        >
-          <span className="text-xl leading-none">+</span>
-          <span className="text-sm font-medium">Add new page</span>
-        </button>
-      </div>
+          <DashboardDropZone id={NEW_PAGE_DROP_ID} data={{ kind: 'newPage' }} disabled={newPageDropDisabled}>
+            <button
+              type="button"
+              onClick={() => addNewPage(3)}
+              className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 p-4 text-slate-400 transition hover:border-indigo-300 hover:text-indigo-500"
+            >
+              <span className="text-xl leading-none">+</span>
+              <span className="text-sm font-medium">Add new page</span>
+            </button>
+          </DashboardDropZone>
+        </div>
+
+        {/* The card that follows the pointer. Deliberately a compact summary
+            rather than a clone of the real card: the real one carries a maze
+            thumbnail and two controls, and dragging a full-size copy of that
+            obscures the very drop targets it is being aimed at. */}
+        <DragOverlay dropAnimation={null}>
+          {activeDrag && (
+            <div className="rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-lg">
+              {describeQuestion(activeDrag.questionId)}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
     </main>
   )
 }

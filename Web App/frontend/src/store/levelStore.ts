@@ -74,6 +74,9 @@ interface LevelStore {
   addQuestionToRow: (pageId: string, star: number) => void
   addNewPage: (star: number) => void
   toggleRowBonus: (pageId: string) => void
+  swapQuestions: (questionIdA: string, questionIdB: string) => void
+  moveQuestionToRow: (questionId: string, targetPageId: string) => void
+  moveQuestionToNewPage: (questionId: string) => void
   setQuestionStar: (questionId: string, star: number) => void
   removeQuestion: (questionId: string) => void
   markInProgress: (questionId: string) => void
@@ -175,6 +178,106 @@ export const useLevelStore = create<LevelStore>((set) => ({
           ),
           updatedAt: new Date().toISOString(),
         },
+      }
+    }),
+
+  // level_dashboard_pagination_spec.md §5's three drag gestures. All three are
+  // pure *moves* — a question keeps its question_id, its star and its maze, and
+  // only its row membership changes. Nothing here re-derives occurrence numbers
+  // (unlike setQuestionStar): the sheet's multiset of questions is unchanged, so
+  // the existing ids stay correct and stable, which also keeps React keys and
+  // DnD identity stable across a drop.
+  //
+  // `isBonus` deliberately does NOT travel with a question. It is a property of
+  // the *page* (§4.4 — it selects the laurel page-number box), so a question
+  // dragged into a Bonus row becomes part of that bonus page, and a row emptied
+  // by a drag takes its flag with it when it self-deletes.
+
+  // Gesture 1 — a question dropped on another question's card: the two trade
+  // places. Works within one row (reordering the pair) or across rows. Neither
+  // row's question count changes, so this can never trigger §4.3's self-delete,
+  // which is why this is the only gesture with no `.filter()` below.
+  swapQuestions: (questionIdA, questionIdB) =>
+    set((state) => {
+      if (!state.current || questionIdA === questionIdB) return state
+      const all = flattenPages(state.current.pages)
+      const a = all.find((q) => q.question_id === questionIdA)
+      const b = all.find((q) => q.question_id === questionIdB)
+      if (!a || !b) return state
+      return {
+        current: {
+          ...state.current,
+          pages: state.current.pages.map((page) => ({
+            ...page,
+            questions: page.questions.map((q) =>
+              q.question_id === questionIdA ? b : q.question_id === questionIdB ? a : q,
+            ),
+          })),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    }),
+
+  // Gesture 2 — a question dropped on a row's empty "+ Add question" slot:
+  // it moves in as that row's second question. The capacity re-check mirrors
+  // §4.2 rather than trusting the UI to have hidden the slot, since a stale
+  // drop target is the one way a 3-question row could otherwise be created.
+  moveQuestionToRow: (questionId, targetPageId) =>
+    set((state) => {
+      if (!state.current) return state
+      const source = state.current.pages.find((page) =>
+        page.questions.some((q) => q.question_id === questionId),
+      )
+      const target = state.current.pages.find((page) => page.pageId === targetPageId)
+      if (!source || !target || source.pageId === target.pageId) return state
+      if (target.questions.length >= 2) return state
+      const question = source.questions.find((q) => q.question_id === questionId)
+      if (!question) return state
+      const pages = state.current.pages
+        .map((page) => {
+          if (page.pageId === target.pageId) return { ...page, questions: [...page.questions, question] }
+          if (page.pageId === source.pageId) {
+            return { ...page, questions: page.questions.filter((q) => q.question_id !== questionId) }
+          }
+          return page
+        })
+        // §4.3 — the source row self-deletes if that was its only question.
+        .filter((page) => page.questions.length > 0)
+      return {
+        current: { ...state.current, pages, updatedAt: new Date().toISOString() },
+      }
+    }),
+
+  // Gesture 3 — a question dropped on "+ Add new page": it moves onto a brand-new
+  // row appended at the end of pages[], its source row self-deleting per §4.3 if
+  // emptied. That combination is also how a whole page reaches the end of the
+  // sheet today, since §5.1 leaves whole-row dragging out of scope: drag the lone
+  // question off a 1-question row and the row effectively moves with it.
+  //
+  // Rejecting the already-alone-on-the-last-row case is not just tidiness — that
+  // move produces a sheet identical in content, so letting it through would issue
+  // a new pageId (remounting the row and dropping any transient card state) and
+  // bump updatedAt for a no-op.
+  moveQuestionToNewPage: (questionId) =>
+    set((state) => {
+      if (!state.current) return state
+      const existing = state.current.pages
+      const sourceIndex = existing.findIndex((page) => page.questions.some((q) => q.question_id === questionId))
+      if (sourceIndex === -1) return state
+      const source = existing[sourceIndex]
+      if (source.questions.length === 1 && sourceIndex === existing.length - 1) return state
+      const question = source.questions.find((q) => q.question_id === questionId)
+      if (!question) return state
+      const pages = existing
+        .map((page) =>
+          page.pageId === source.pageId
+            ? { ...page, questions: page.questions.filter((q) => q.question_id !== questionId) }
+            : page,
+        )
+        .filter((page) => page.questions.length > 0)
+      pages.push({ pageId: newPageId(), questions: [question], isBonus: false })
+      return {
+        current: { ...state.current, pages, updatedAt: new Date().toISOString() },
       }
     }),
 

@@ -402,10 +402,10 @@ in §5).
    arrived and is specced; the renderer is not yet built), replacing the disabled button
    from step 5. Open decisions in that doc's §7 need resolving first (icon set,
    answer-key delivery, backend-vs-frontend rendering).
-9. *(Future)* Level Dashboard page-row redesign per `level_dashboard_pagination_spec.md`
-   — `pages[]` data model + migration, drag-and-drop, Preview/Download actions. Its
-   Preview button's Phase A (in-app layout preview) doesn't need step 8's renderer;
-   Phase B (real PDF preview) and Download's PDF half do.
+9. **Done.** Level Dashboard page-row redesign per
+   `level_dashboard_pagination_spec.md` — `pages[]` data model + migration (2026-08-21),
+   Preview/Download actions (2026-08-21), drag-and-drop (2026-08-26). That doc has no
+   unimplemented sections left; §5.1's whole-row dragging was scoped out, not deferred.
 
 ---
 

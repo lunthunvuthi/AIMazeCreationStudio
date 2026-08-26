@@ -21,8 +21,10 @@ instruction from the project owner (also directly confirmed, not inferred).
 `types/maze.ts`/`store/levelStore.ts`/`storage/fileAdapter.ts`/`LevelDashboardPage.tsx`.
 §6's Preview/Download buttons landed 2026-08-21. Row 0's lock was **removed** the same
 day — see §2.1's notice and §4.1.
-**Not implemented:** §5's drag-and-drop (swap/move questions between rows via
-`@dnd-kit`) — a deliberate scope cut, not an oversight.
+§5's drag-and-drop landed **2026-08-26** — all three gestures, in
+`components/dashboardDnd.ts` / `DraggableQuestionSlot.tsx` / `DashboardDropZone.tsx` and
+three new `levelStore` actions. This doc has no unimplemented sections left; §5.1's
+whole-row dragging remains deliberately out of scope.
 
 ---
 
@@ -151,7 +153,7 @@ page rows**, each rendered full-width, in `pages[]` order:
 ### 4.1 Row 0 is an ordinary row **(supersedes 2026-08-19's locked cover row)**
 
 There is no locked row. Row 0 takes the same controls as every other row — page number,
-Bonus toggle, Remove, "+ Add question", and (once §5 is built) drag in and out — and it
+Bonus toggle, Remove, "+ Add question", and (since 2026-08-26) drag in and out — and it
 self-deletes when emptied like the rest (§4.3).
 
 > **What this section used to say, and why it changed.** Row 0 was originally fixed:
@@ -219,6 +221,31 @@ plus two supporting ones. Concretely, three drag gestures cover everything descr
    row created at the end of `pages[]` (its original row self-deletes per §4.3 if
    emptied).
 
+**Implemented 2026-08-26.** Each gesture maps to one `levelStore` action —
+`swapQuestions`, `moveQuestionToRow`, `moveQuestionToNewPage` — and
+`LevelDashboardPage.tsx`'s `handleDragEnd` does nothing but route to them by what the
+drop target declared itself to be. Three notes worth carrying:
+
+- **Every guard lives in the store, not the drop handler**, so a drag and the equivalent
+  click-driven edit cannot diverge. That includes re-checking §4.2's capacity even though
+  a full row renders no "+ Add question" target to drop on.
+- **Drops that would produce an identical sheet are refused, not merely ignored** — moving
+  a question into the row it already occupies, and moving one that is already alone on the
+  last row onto a new page. Letting the second through would issue a fresh `pageId`
+  (remounting the row) and bump `updatedAt` for no change. Those targets are also passed
+  `disabled` so they never light up as droppable.
+- **`isBonus` does not travel with a question.** It is a property of the page (§4.4), so a
+  question dragged into a Bonus row joins that bonus page, and a row emptied by a drag
+  takes its flag with it when it self-deletes.
+
+Each card is dragged by a **grip**, not by its whole surface: the card wraps a Link to the
+wizard, a difficulty `<select>` and a Remove button, and a card-wide activator would put a
+pointer-capturing listener over all three. The grip also gives the keyboard sensor a
+focusable element, which is what makes all three gestures completable without a pointer
+(Space to pick up, arrows to move in dnd-kit's 25px steps, Space to drop, Escape to
+cancel) — verified in a real browser, along with custom screen-reader announcements that
+say what a drop would *do* rather than reading out raw `question_id`s.
+
 ### 5.1 Whole-row reordering is out of scope **(CONFIRMED by omission)**
 
 Nothing in the request asks for dragging an entire row as a unit — only individual
@@ -229,12 +256,24 @@ per-question gestures above) — not built into this pass.
 
 ### 5.2 Library
 
-No drag-and-drop library exists in `Web App/frontend/package.json` yet (checked
-2026-08-19 — only `react`, `react-dom`, `react-router-dom`, `zustand`). **Confirmed
-2026-08-19** — `@dnd-kit/core` (+ `@dnd-kit/sortable` if the swap/move semantics above
-map cleanly onto its sortable primitives), for its lightweight footprint, no dependency
-on a specific backend, and good accessibility defaults. Still needs adding to
-`package.json` when implementation starts.
+**Confirmed 2026-08-19, installed 2026-08-26** — `@dnd-kit/core` 6.3.1, for its
+lightweight footprint, no dependency on a specific backend, and good accessibility
+defaults.
+
+**`@dnd-kit/sortable` was evaluated and deliberately not installed.** This section left it
+open ("if the swap/move semantics above map cleanly onto its sortable primitives"); they
+don't, on two counts:
+
+1. Gesture 1 is a **swap** — two questions trade places. Sortable models
+   insert-and-shift, so a cross-row sortable drop would push a question out of the target
+   row rather than exchange with it.
+2. Two of the three drop targets **aren't list items at all** — one is a row's "+ Add
+   question" slot, the other the sheet-level "+ Add new page" button. A sortable container
+   cannot express "drop here to create a new container."
+
+So each droppable declares its own kind (`dashboardDnd.ts`'s `DropData`) and one
+`onDragEnd` switch routes it. Reconsider `sortable` only if §5.1's whole-row reordering is
+ever wanted — that one *is* a list reorder.
 
 ---
 
@@ -276,8 +315,8 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
 `LevelProgress`/`pages[]` data.
 
 - **Phase A (done):** the `pages[]` data model, row-based dashboard UI, and Bonus toggle
-  are implemented (§4.4). Drag-and-drop from §5 is deliberately **not** built yet
-  (scope cut, see `pdf_export_spec.md`'s "Done" history / `MEMORY.md`).
+  are implemented (§4.4). Drag-and-drop from §5, once a deliberate scope cut here, landed
+  2026-08-26.
 - **Phase B (done, 2026-08-20):** real `LevelProgress` data is wired into the hybrid
   renderer, and the actual **Preview**/**Download** buttons in `LevelDashboardPage.tsx`
   replace the old Save Progress/Export JSON pair per §6.1 — backed by a new
@@ -307,7 +346,11 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
   `LevelDashboardPage.tsx`, which is short enough not to need extracting yet; revisit
   when §5's drag state lands. `AddQuestionCard` is reused as-is inside a row (§3) — no
   changes expected there.
-- `Web App/frontend/package.json` — new drag-and-drop dependency (§5.2).
+- `Web App/frontend/package.json` — `@dnd-kit/core` (§5.2).
+- `Web App/frontend/src/components/dashboardDnd.ts` — the `DropData` kinds and their
+  runtime narrowings; the header comment carries §5.2's sortable decision.
+- `Web App/frontend/src/components/DraggableQuestionSlot.tsx` — grip + swap target.
+- `Web App/frontend/src/components/DashboardDropZone.tsx` — gestures 2 and 3's targets.
 
 ---
 

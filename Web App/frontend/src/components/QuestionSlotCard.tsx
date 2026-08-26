@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { MazeQuestion } from '../types/maze'
 import PickaxeGrid from '../registry/pickaxe/PickaxeGrid'
@@ -23,6 +24,7 @@ export default function QuestionSlotCard({
   starOptions,
   onChangeStar,
   onRemove,
+  dragHandle,
 }: {
   mazeTypeId: string
   question: MazeQuestion
@@ -33,9 +35,15 @@ export default function QuestionSlotCard({
   // optional only for §4.1's locked cover row, which rendered a card with no
   // Remove control at all — that row is gone (2026-08-21).
   onRemove: () => void
+  // level_dashboard_pagination_spec.md §5's drag grip, supplied by
+  // DraggableQuestionSlot. Optional so this card stays usable on its own — the
+  // drag wiring lives entirely in the wrapper, and a card rendered without one
+  // simply isn't draggable.
+  dragHandle?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+    <div className="flex h-full flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+      {dragHandle && <div className="-mt-2 -ml-2 flex">{dragHandle}</div>}
       <Link to={`/${mazeTypeId}/dashboard/${question.question_id}`} className="flex flex-col items-center gap-2">
         {question.maze && (
           <div className="mx-auto w-24">
