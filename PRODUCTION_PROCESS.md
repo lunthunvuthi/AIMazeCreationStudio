@@ -46,7 +46,7 @@ done until that artifact exists, because the next stage reads it.
 
 | # | Stage | Where the artifact lives | Status for `pickaxe` |
 |---|---|---|---|
-| A1 | **Game context** — the theme, the audience, what the player is doing and why | *No home yet — see §5* | Informal (repo `README.md` only) |
+| A1 | **Game context** — the theme, the audience, what the player is doing and why | `Maze-All-Contents/pickaxe-maze-creation/docs/concept.md` | Done 2026-08-26 |
 | A2 | **Rules & regulations** — how the maze works start to finish | `Maze-All-Contents/pickaxe-maze-creation/docs/rules.md` §1–§6 | Done |
 | A3 | **Data shape / saving system** — the JSON a maze and a sheet serialize to | `rules.md` §7 (per-maze tokens) + `development_plan.md` §4 (`MazeData`, `MazeQuestion`, `LevelProgress`) + `level_dashboard_pagination_spec.md` §2 (`PageRow`) | Done |
 | A4 | **Generation & validation** — how a maze is produced, and how it is proven legal | `generation_spec.md`, `validator_design.md`, `difficulty_setting.md`; implemented in `pickaxe_maze/` | Done |
@@ -144,12 +144,17 @@ so a row's dashboard label and its printed page number cannot drift apart. See
 
 ## 5. Gaps this process exposes
 
-Writing the stages out surfaced three things that have no home today:
+Writing the stages out surfaced three things that had no home. The first is now closed;
+the other two are still open:
 
-1. **A1 has no artifact.** "Give the context of the game" is a real stage — it is what
-   the rules are *for*, and it is what tells a designer what the cover should teach — but
-   there is no `concept.md`. Today it exists only as the repo `README.md`'s generic
-   project overview. Recommend a `concept.md` alongside each maze type's `rules.md`.
+1. **A1 had no artifact — closed 2026-08-26.** "Give the context of the game" is a real
+   stage: it is what the rules are *for*, and it is what tells a designer what the cover
+   should teach. It used to exist only as the repo `README.md`'s generic project overview.
+   `pickaxe` now has `docs/concept.md` alongside its `rules.md`, and that is the pattern
+   for every future maze type. Note that its §7 leaves three questions open for the owner
+   (target age band per level, whether the cover must state the exactly-zero rule
+   outright, and how much of the mining fiction is canon) — deliberately unanswered rather
+   than guessed.
 2. **Advanced has no last page of its own.** It reuses Primary's artwork, which is a
    deliberate stand-in, not a finished state — a dedicated Advanced page is still owed.
 3. **No second maze type has run this process.** The seam table in §3 is derived from
