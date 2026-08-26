@@ -65,7 +65,28 @@ pytest
 ### Running the backend
 
 ```bash
-uvicorn maze_api.main:app --reload --app-dir "Web App/backend" --port 8000
+python scripts/run_backend.py
+```
+
+Use this rather than calling `uvicorn` directly. It starts the same app, and adds the two
+things a bare `uvicorn --reload` gets wrong:
+
+- **It dies with its terminal.** `uvicorn --reload` does not stop when its terminal
+  closes — it gets reparented to PID 1 and keeps holding port 8000, so the next start
+  fails with `[Errno 48] Address already in use` while an invisible server from days ago
+  goes on serving stale code. The script tears the server down on Ctrl-C, on `kill`, and
+  on the terminal going away (including a hard kill that sends no `SIGHUP`).
+- **It only watches the app's own code.** Bare `--reload` watches the whole repo root,
+  `node_modules` and `output/` included, which costs a busy core indefinitely. The script
+  passes `--reload-dir` for the backend and the generator package.
+
+If a stale backend is still on the port, the script reclaims it and says so. A port held
+by anything that is *not* one of our servers is left alone and reported instead.
+
+```bash
+python scripts/run_backend.py --port 8001   # somewhere else
+python scripts/run_backend.py --no-reload   # no watcher, no reload child
+python scripts/run_backend.py --stop        # just free the port and exit
 ```
 
 Serves the two endpoints from [`Web App/docs/development_plan.md`](Web%20App/docs/development_plan.md)
