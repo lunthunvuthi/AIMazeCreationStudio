@@ -19,8 +19,11 @@ purely from the request payload plus the `pickaxe_maze` algorithms.
 
 Run it with:
 ```bash
-uvicorn maze_api.main:app --reload --app-dir "Web App/backend" --port 8000
+python scripts/run_backend.py
 ```
+Not `uvicorn` directly: the reloader outlives its terminal and keeps holding port 8000.
+See "Running the backend" in the root [`README.md`](../../../README.md).
+
 It depends on `pickaxe_maze` being installed editable (`pip install -e ".[dev]"` from
 repo root) — see the Gotcha in §6.
 
