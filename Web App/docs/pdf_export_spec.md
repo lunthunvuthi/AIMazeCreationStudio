@@ -303,6 +303,14 @@ on what were meant to be plain answer-key panels). **Confirmed 2026-08-19** — 
 answer key is a **separate download** (`Export PDF` + `Export Answer Key PDF`, as in the
 sample, two distinct files), so a teacher can hand out only the question sheet.
 
+**Built 2026-08-27.** The Level Dashboard's **Answer Key** button renders with
+`answerKey: true` and saves as `<sheet filename>-answer-key.pdf` — the same base name as
+the question sheet with a suffix, so the pair sorts together in a download folder.
+Unlike Preview/Download it does not cache a blob or require a preview first: the key is
+never the artifact being proofed on screen, so a two-step flow would only add a click. It
+is gated on every question being complete, because an empty slot leaves the renderer's
+question panel with no maze to draw and the page never signals ready.
+
 ---
 
 ## 7. Open Decisions Before Implementation

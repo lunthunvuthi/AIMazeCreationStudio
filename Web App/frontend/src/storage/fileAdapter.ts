@@ -10,10 +10,12 @@ import { packQuestionsIntoPages } from '../store/levelStore'
 
 const LEVEL_NAMES: LevelName[] = ['kinder', 'primary', 'advanced']
 
-export function buildExportFilename(progress: LevelProgress, ext: string): string {
+// `suffix` lands before the extension, so a sheet and its answer key sort next
+// to each other in a download folder rather than under separate letters.
+export function buildExportFilename(progress: LevelProgress, ext: string, suffix = ''): string {
   const stamp = progress.updatedAt.replace(/[:.]/g, '-')
   const monthStr = String(progress.month).padStart(2, '0')
-  return `${progress.mazeType}-${progress.level}-${progress.year}-${monthStr}-week${progress.week}-${stamp}.${ext}`
+  return `${progress.mazeType}-${progress.level}-${progress.year}-${monthStr}-week${progress.week}-${stamp}${suffix}.${ext}`
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

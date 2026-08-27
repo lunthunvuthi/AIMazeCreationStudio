@@ -129,7 +129,8 @@ the PDF for user."*
    ```
 
 3. Answer key is the same sequence with solution paths overlaid — a separate download
-   (`pdf_export_spec.md` §6).
+   (`pdf_export_spec.md` §6). Built 2026-08-27: the dashboard's **Answer Key** button,
+   alongside Preview/Download.
 
 **Consequence for the data model.** Because A9's tutorial is fixed, the cover no longer
 consumes a question, so *every* row in `pages[]` is a question page. The renderer was

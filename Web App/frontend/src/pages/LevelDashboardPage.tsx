@@ -61,6 +61,7 @@ export default function LevelDashboardPage() {
   const [isRendering, setIsRendering] = useState(false)
   const [previewedSnapshot, setPreviewedSnapshot] = useState<string | null>(null)
   const [previewedBlob, setPreviewedBlob] = useState<Blob | null>(null)
+  const [isRenderingKey, setIsRenderingKey] = useState(false)
 
   const sensors = useSensors(
     // A 5px threshold rather than an instant grab. The grip lives inside a card
@@ -211,6 +212,24 @@ export default function LevelDashboardPage() {
     downloadLevelProgress(current)
   }
 
+  // PRODUCTION_PROCESS.md §4 step 3 / pdf_export_spec.md §6 — the answer key is
+  // the same page sequence with solution paths overlaid, delivered as its own
+  // download. Deliberately NOT routed through the Preview/Download pair: the
+  // key is never the thing being proofed on screen, so caching a blob and
+  // gating the save on a matching snapshot would only add a step. It renders
+  // and saves in one click, and takes the render cost every time.
+  const handleAnswerKey = async () => {
+    setIsRenderingKey(true)
+    try {
+      const blob = await renderPdf(current, { answerKey: true })
+      downloadBlob(blob, buildExportFilename(current, 'pdf', '-answer-key'))
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Answer key render failed.')
+    } finally {
+      setIsRenderingKey(false)
+    }
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <Link to={`/${mazeType.id}`} className="text-sm text-indigo-600 hover:underline">
@@ -259,6 +278,20 @@ export default function LevelDashboardPage() {
             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-600 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:text-slate-400"
           >
             Download
+          </button>
+          {/* Gated on allComplete, like Download and unlike Preview. An empty
+              slot carries no maze, so the renderer's question panel has nothing
+              to draw and the page never signals ready — the service then spends
+              its full timeout before failing. Refusing the click is the only
+              honest answer until Preview is gated the same way. */}
+          <button
+            type="button"
+            onClick={handleAnswerKey}
+            disabled={isRenderingKey || !allComplete}
+            title={!allComplete ? 'Complete every question first' : undefined}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-600 disabled:text-slate-400 disabled:hover:border-slate-200 disabled:hover:text-slate-400"
+          >
+            {isRenderingKey ? 'Rendering…' : 'Answer Key'}
           </button>
         </div>
       </div>
