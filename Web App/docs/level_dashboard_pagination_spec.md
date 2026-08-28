@@ -284,9 +284,31 @@ ever wanted — that one *is* a list reorder.
 - **Save Progress** — unchanged. Always-available JSON-only checkpoint download, same
   as today.
 - **Preview** (new) — renders the worksheet as it would print, for the *current* state
-  of `pages[]`, regardless of completion (useful mid-work, incomplete questions render
+  of `pages[]`. ~~Regardless of completion (useful mid-work, incomplete questions render
   as an empty/placeholder panel). **(ASSUMPTION)** — not gated on `allComplete`, since
-  its whole point is checking layout before finishing.
+  its whole point is checking layout before finishing.~~ **Assumption retired
+  2026-08-27:** Preview is now gated on `allComplete` like Download.
+
+  Only half of that assumption was ever built. Preview shipped ungated, but the
+  placeholder panel it depended on never existed — an empty slot carries no maze, so
+  `PickaxeQuestionPanel`'s `question.maze!` has nothing to draw, the render page never
+  sets `data-pdf-ready`, and pdf-service spends its full 30s timeout before returning a
+  500 whose raw Playwright message ("waiting for locator('[data-pdf-ready=true]')")
+  surfaced verbatim in a `window.alert`. So the ungated button did not do the useful
+  mid-work thing this bullet describes; it hung and then showed a stack-trace-shaped
+  error. Found 2026-08-27 running Phase B end to end.
+
+  Gating is the smaller of the two fixes and the one that needs no design input. The
+  other — actually building the placeholder panel — is still open, and is a question for
+  the designer first: nothing in `pdf_design_spec.md` says what an unauthored question
+  slot looks like in print, and this repo does not guess at design decisions. If
+  proofing layout mid-authoring turns out to matter, that is the version to build, and
+  this bullet's original intent is the reason to build it.
+- **Answer Key** (added 2026-08-27) — renders the same sheet with solution paths
+  overlaid and saves it in one click, as `<sheet filename>-answer-key.pdf`
+  (`pdf_export_spec.md` §6). Gated on `allComplete` for the same reason as Preview, but
+  deliberately *not* on §6.2's preview-freshness rule: the key is never the artifact
+  being proofed on screen, so there is no stale-bytes hazard for that gate to prevent.
 - **Download** (new, replaces today's `Export JSON` button) — downloads **both** the
   PDF and the JSON for the current sheet in one click. Gated on:
   1. `allComplete` (same rule `Export JSON` already used), **and**
@@ -321,8 +343,8 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
   renderer, and the actual **Preview**/**Download** buttons in `LevelDashboardPage.tsx`
   replace the old Save Progress/Export JSON pair per §6.1 — backed by a new
   `Web App/pdf-service/` Node/Express service (see `pdf_export_spec.md` §7 item 5's
-  2026-08-20 update for the architecture). Preview renders regardless of completion
-  and caches the resulting blob; Download reuses that cached blob (no re-render) once
+  2026-08-20 update for the architecture). Preview caches the resulting blob (and as of
+  2026-08-27 is gated on `allComplete`, §6.1); Download reuses that cached blob (no re-render) once
   §6.2's `previewedSnapshot === JSON.stringify(current)` gate passes, and also
   downloads the JSON via the existing `downloadLevelProgress`. Verified end-to-end via
   the real Modify-Maze-load → Dashboard → Preview → Download flow with a fully-complete
@@ -367,5 +389,8 @@ Preview needs *something* to render a PDF-like view from. `pdf_export_spec.md` �
 4. Everything else in this doc was either directly confirmed with the project owner
    (§4.1, §4.3/§5.1, §6.2, §4.4, and keeping the in-row add picker per §3) or is a
    low-risk inferred default (migration grouping §2.3, 3-star new-page default already
-   stated by the project owner, Preview not gated on completeness §6.1) — flagged
-   inline as **(ASSUMPTION)** rather than blocking on it.
+   stated by the project owner, ~~Preview not gated on completeness §6.1~~) — flagged
+   inline as **(ASSUMPTION)** rather than blocking on it. The Preview one did not
+   survive contact with a real Phase B run: it was retired 2026-08-27 (§6.1), because
+   the placeholder-panel rendering it quietly depended on was never built, so the
+   ungated button hung for 30s and then alerted a raw Playwright error.

@@ -1,6 +1,6 @@
 # AI Maze & Quiz Generator
 
-A system designed to generate procedurally generated mazes, quizzes, and questions using AI, strictly adhering to predefined rulesets. 
+A system designed to generate procedurally generated mazes, quizzes, and questions using AI, strictly adhering to predefined rulesets.
 
 ## Project Overview
 
@@ -18,13 +18,16 @@ The core goal of this project is to leverage AI to generate educational and ente
 The puzzles are categorized into three main levels, each with specific parameters but sharing a core concept.
 
 ### Levels
+
 - **Kinder Level**: Introductory puzzles with foundational rules.
 - **Primary Level**: Intermediate puzzles with expanded rulesets.
 - **Advanced Level**: Complex puzzles pushing the boundaries of the rules.
 
 ### Difficulty (1 to 8 Stars)
-Within each level, difficulty is scaled from 1 ⭐ to 8 ⭐⭐⭐⭐⭐⭐⭐⭐. 
+
+Within each level, difficulty is scaled from 1 ⭐ to 8 ⭐⭐⭐⭐⭐⭐⭐⭐.
 The difficulty rating is determined by:
+
 - The minimum number of moves required to solve the puzzle.
 - The estimated time a user would spend to solve it.
 
@@ -38,9 +41,10 @@ spec in the repo covers one stage of it; start there to find out which.
 
 ## Design and Templates
 
-The visual representation of the puzzles is a crucial component. 
-* As the project progresses, we will analyze sample PDFs.
-* For each puzzle type, a specific `design.md` document will be created to clearly define its visual template and styling guidelines.
+The visual representation of the puzzles is a crucial component.
+
+- As the project progresses, we will analyze sample PDFs.
+- For each puzzle type, a specific `design.md` document will be created to clearly define its visual template and styling guidelines.
 
 ## Getting Started
 
@@ -81,7 +85,7 @@ things a bare `uvicorn --reload` gets wrong:
   passes `--reload-dir` for the backend and the generator package.
 
 If a stale backend is still on the port, the script reclaims it and says so. A port held
-by anything that is *not* one of our servers is left alone and reported instead.
+by anything that is _not_ one of our servers is left alone and reported instead.
 
 ```bash
 python scripts/run_backend.py --port 8001   # somewhere else
@@ -124,23 +128,65 @@ Run `pickaxe-maze <subcommand> --help` for the full set of options (custom seeds
 ## Frontend
 
 React + TypeScript (Vite) + Tailwind CSS + Zustand, in
-[`Web App/frontend/`](Web%20App/frontend/). Currently implements the roadmap step 1
-skeleton from `development_plan.md` §9: routing, the maze-type registry (§5), the landing
-page (§6.1), and the Level Dashboard shell (§6.5). The manual wizard, randomize flow, and
-file-based save/load are later roadmap steps and are stubbed with "coming soon" screens for
-now.
+[`Web App/frontend/`](Web%20App/frontend/). Implements roadmap steps 1-5 and 8-9 from
+`development_plan.md` §9: routing, the maze-type registry (§5), the landing page (§6.1),
+the Level Dashboard with its page rows and drag-and-drop (§6.5,
+`level_dashboard_pagination_spec.md`), the manual creation wizard, the randomize/reroll
+flow, file-based save/load, and PDF export. Still future: `localStorage` autosave (step 6)
+and backend-persisted accounts (step 7) — until then a browser refresh loses an
+in-progress sheet, and **Save Progress** is the only safety net.
 
 Requires Node 20.19+ (or 22.12+). This is a separate `npm` project from the Python side
 above — no virtualenv involved.
 
 ```bash
 cd "Web App/frontend"
-npm install       # first time only
+npm install
 npm run dev
 ```
 
 Open the URL Vite prints (`http://localhost:5173` by default). The dev server proxies
-`/api/*` to `http://127.0.0.1:8000` (see `vite.config.ts`), so run the backend alongside it
-(see "Running the backend" above) to exercise real API calls once later steps wire them up.
+`/api/pdf/*` to the PDF service on `:8010` and everything else under `/api/*` to the
+backend on `:8000` (see `vite.config.ts`), so both need to be running alongside it.
 
 Other scripts: `npm run build` (typecheck + production build), `npm run lint`.
+
+> **`npx tsc --noEmit` here typechecks zero files** and proves nothing — see the warning
+> in `tsconfig.json`. Use `npm run build`, which runs `tsc -b`.
+
+## PDF service
+
+The Level Dashboard's **Preview**, **Download** and **Answer Key** buttons are served by a
+third process: [`Web App/pdf-service/`](Web%20App/pdf-service/), an Express app that drives
+headless Playwright against the frontend's own `/spike/pdf-preview` route and returns real
+PDF bytes. Without it running, all three buttons fail with a `503`.
+
+```bash
+cd "Web App/pdf-service"
+npm install                 # first time only
+npx playwright install chromium   # first time only
+npm start
+```
+
+It listens on `:8010` and expects the frontend dev server at `http://localhost:5173`. If
+Vite picked a different port — it does when 5173 is already held, printing the one it
+chose — point the service at it, or the render will time out against whatever *is* on
+5173:
+
+```bash
+FRONTEND_URL=http://localhost:5174 npm start
+PORT=8011 npm start                          # somewhere else
+```
+
+Unlike the backend script above, this one does **not** die with its terminal.
+
+### Running all three
+
+Three terminals, in any order — the PDF service only reaches for the frontend when a
+render is requested:
+
+```bash
+python scripts/run_backend.py                # :8000  generate / validate
+cd "Web App/frontend"    && npm run dev      # :5173  the app
+cd "Web App/pdf-service" && npm start        # :8010  Preview / Download / Answer Key
+```
