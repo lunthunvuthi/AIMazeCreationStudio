@@ -210,13 +210,16 @@ then clicks Preview, Download and Answer Key, and saves the results under `phase
 level and month/week, badge numbering and its left/right alternation, and that the answer
 key differs from the worksheet on exactly the question pages.
 
-`--help` lists the rest. Two things worth knowing:
+`--help` lists the rest. Three things worth knowing:
 
 - The driver's `--frontend` points **the driver**. pdf-service renders against *its* own
   `FRONTEND_URL`, so if Vite moved to `:5174` both need telling, or the export silently
   comes back rendered against whatever is on `:5173`.
 - Start Vite with `VITE_FAST_ANIM=1` to cut the Randomize animation to ~5%; otherwise the
   randomize route spends about 7 seconds per question.
+- Re-running into a folder that already holds a run is refused; pass `--clean` to replace
+  those artifacts or `--out` to keep both. Export filenames carry their own timestamp, so
+  two runs would otherwise sit side by side and the verifier could check the older one.
 
 The verifier needs PyMuPDF, which is not installed by default:
 

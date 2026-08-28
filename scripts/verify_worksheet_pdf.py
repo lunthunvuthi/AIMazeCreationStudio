@@ -64,30 +64,51 @@ class Report:
 
 
 def find_artifacts(out_dir: Path) -> tuple[Path, Path, dict]:
-    pdfs = sorted(out_dir.glob('*.pdf'))
-    keys = [p for p in pdfs if p.stem.endswith('-answer-key')]
-    sheets = [p for p in pdfs if not p.stem.endswith('-answer-key')]
-    if not sheets or not keys:
-        sys.exit(f'{out_dir}: expected a worksheet PDF and an -answer-key PDF, found {[p.name for p in pdfs]}')
-    # Identified by shape rather than by name: the folder also holds the run's
-    # own manifest, and Download names the progress file after the sheet.
-    for candidate in sorted(out_dir.glob('*.json')):
-        try:
-            data = json.loads(candidate.read_text())
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict) and 'pages' in data and 'level' in data:
-            return sheets[0], keys[0], data
-    sys.exit(f'{out_dir}: no saved-progress .json (Download writes one alongside the PDF)')
+    """Pick one export's three files: worksheet, its answer key, its progress JSON.
+
+    Every export filename carries its own timestamp, so two runs into one folder
+    coexist silently — and picking each file independently is how this ends up
+    checking last run's worksheet against this run's key and reporting green.
+    The three files of a single export share a stem (`buildExportFilename`
+    appends only a suffix), so the key and the progress file are *derived* from
+    the chosen worksheet rather than searched for.
+    """
+    sheets = sorted(
+        (p for p in out_dir.glob('*.pdf') if not p.stem.endswith('-answer-key')),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    if not sheets:
+        sys.exit(f'{out_dir}: no worksheet PDF here (the driver writes one on Download)')
+
+    sheet = sheets[0]
+    if len(sheets) > 1:
+        print(f'NOTE: {len(sheets)} worksheets in this folder — checking the newest, {sheet.name}.')
+        print('      Re-run the driver with --clean so an older run cannot be mistaken for this one.\n')
+
+    key = sheet.with_name(f'{sheet.stem}-answer-key.pdf')
+    progress = sheet.with_suffix('.json')
+    for path_, what in ((key, 'answer key'), (progress, 'saved-progress JSON')):
+        if not path_.exists():
+            sys.exit(f'{out_dir}: no {what} for {sheet.name} (expected {path_.name})')
+    return sheet, key, json.loads(progress.read_text())
 
 
 def page_differs(a, b, dpi: int = 72) -> int:
-    """Count of differing pixel bytes between two rendered pages."""
-    sa = a.get_pixmap(dpi=dpi).samples
-    sb = b.get_pixmap(dpi=dpi).samples
-    if len(sa) != len(sb):
-        return max(len(sa), len(sb))
-    return sum(1 for i in range(0, len(sa), 3) if sa[i] != sb[i])
+    """How many pixels differ between two rendered pages, or -1 if incomparable.
+
+    Compares every channel of every pixel. Stepping through one byte per pixel
+    would only ever read red, which passes a page whose difference is green or
+    blue alone — fine for today's grey solution overlay, wrong as a guarantee.
+    """
+    pa, pb = a.get_pixmap(dpi=dpi), b.get_pixmap(dpi=dpi)
+    if pa.n != pb.n or len(pa.samples) != len(pb.samples):
+        return -1
+    sa, sb = pa.samples, pb.samples
+    if sa == sb:  # whole-buffer compare first: identical pages are the common case
+        return 0
+    n = pa.n
+    return sum(1 for i in range(0, len(sa), n) if sa[i:i + n] != sb[i:i + n])
 
 
 def main() -> int:
@@ -144,8 +165,10 @@ def main() -> int:
     print('\nanswer key is the same document plus solutions')
     for i in range(min(sheet.page_count, key.page_count)):
         diff = page_differs(sheet[i], key[i])
-        if i == 0:
-            report.check(diff == 0, f'page 1 (cover) identical')
+        if diff < 0:
+            report.check(False, f'page {i + 1}: renders to different dimensions in the two PDFs')
+        elif i == 0:
+            report.check(diff == 0, 'page 1 (cover) identical')
         elif i == sheet.page_count - 1:
             report.check(diff == 0, f'page {i + 1} (last page) identical')
         else:

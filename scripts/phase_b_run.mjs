@@ -32,6 +32,7 @@
  *   --rerolls                         on the first randomized slot, exercise all
  *                                     three reroll controls before completing
  *   --out <dir>                       artifact folder (default phase-b-out/<level>-<route>)
+ *   --clean                           replace artifacts left by an earlier run
  *   --frontend <url>                  default http://localhost:5173
  *   --backend  <url>                  default http://localhost:8000
  *   --headed                          watch it drive
@@ -39,7 +40,7 @@
  * Needs ALL THREE servers up (README "Running all three"): backend :8000 for
  * generate/validate, Vite for the app, and pdf-service :8010 for the exports.
  *
- * Two traps worth knowing before editing this file:
+ * Three traps worth knowing before editing this file:
  *
  *  - pdf-service renders whatever is at ITS `FRONTEND_URL`, which defaults to
  *    :5173. When Vite finds 5173 taken it silently moves to 5174, and the
@@ -53,6 +54,12 @@
  *    cost a run: the pickaxe-count control was skipped on the first slot with a
  *    pickaxe range, and it surfaced two steps later as a disabled Validate with
  *    "Path walls: 3 / 2". Wait for something visible before counting.
+ *
+ *  - Preview's blob tab resolves to a *download* in headless Chromium, racing
+ *    with the two real exports. Anything that waits on a download COUNT can be
+ *    satisfied by the wrong file — the progress .json standing in for the
+ *    answer key, which then never gets saved while the run still reports
+ *    success. Claim downloads by filename; see `claim()` below.
  *
  * Set VITE_FAST_ANIM=1 on the *Vite* server to cut RandomizeProgressModal's
  * animations to ~5% — the randomize route spends ~7s per question otherwise.
@@ -93,11 +100,15 @@ const USAGE = `Usage: node scripts/phase_b_run.mjs [options]
   --route manual|randomize|mixed    authoring route               (default mixed)
   --rerolls                         exercise the three Randomize reroll controls
   --out <dir>                       artifacts (default phase-b-out/<level>-<route>)
+  --clean                           replace artifacts left by an earlier run
   --frontend <url>                  default http://localhost:5173
   --backend <url>                   default http://localhost:8000
   --headed                          watch it drive
 
 Needs the backend, Vite and pdf-service all running (see README).`
+
+const VALUE_FLAGS = new Set(['level', 'route', 'out', 'frontend', 'backend'])
+const BOOLEAN_FLAGS = new Set(['rerolls', 'headed', 'clean'])
 
 function parseArgs(argv) {
   const opts = {
@@ -108,16 +119,29 @@ function parseArgs(argv) {
     backend: process.env.BACKEND_URL ?? 'http://localhost:8000',
     rerolls: false,
     headed: false,
+    clean: false,
   }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--help' || a === '-h') {
       console.log(USAGE)
       process.exit(0)
-    } else if (a === '--rerolls') opts.rerolls = true
-    else if (a === '--headed') opts.headed = true
-    else if (a.startsWith('--')) opts[a.slice(2)] = argv[++i]
-    else throw new Error(`unexpected argument: ${a}`)
+    }
+    if (!a.startsWith('--')) throw new Error(`unexpected argument: ${a}`)
+    const name = a.slice(2)
+    if (BOOLEAN_FLAGS.has(name)) {
+      opts[name] = true
+    } else if (VALUE_FLAGS.has(name)) {
+      const value = argv[++i]
+      if (value === undefined || value.startsWith('--')) throw new Error(`--${name} needs a value`)
+      opts[name] = value
+    } else {
+      // Assigning unknown keys straight onto opts made a typo silent, and the
+      // silence was expensive in exactly one direction: `--fronend` leaves the
+      // driver on :5173, which is the stale-dev-server trap the header warns
+      // about, and the run still "passes" against whatever is squatting there.
+      throw new Error(`unknown option: ${a}`)
+    }
   }
   if (!['kinder', 'primary', 'advanced'].includes(opts.level)) throw new Error(`bad --level: ${opts.level}`)
   if (!['manual', 'randomize', 'mixed'].includes(opts.route)) throw new Error(`bad --route: ${opts.route}`)
@@ -294,6 +318,11 @@ async function authorByRandomize(page, questionId, star, { rerolls }) {
     // else in a Phase B run touches them.
     for (const name of ['Reroll S/G placement', 'Reroll ideal path', 'Reroll wall placement']) {
       await page.getByRole('button', { name }).click()
+      // Complete is still on screen from the previous settle, so waiting for it
+      // to be *visible* resolves instantly and logs a reroll that has not
+      // started — after which the next click lands on stale DOM. The modal
+      // unmounts that whole block, so wait for it to go away first.
+      await complete.waitFor({ state: 'hidden', timeout: 15000 })
       await complete.waitFor({ state: 'visible', timeout: 60000 })
       log(`    ${name} ok`)
     }
@@ -310,121 +339,185 @@ async function authorByRandomize(page, questionId, star, { rerolls }) {
 // The run
 // --------------------------------------------------------------------------
 
-fs.mkdirSync(opts.out, { recursive: true })
-const findings = []
+// Only ever matches files this script itself writes, and only removed on ask.
+const ARTIFACT_PATTERN = /\.(pdf|json|png)$/
 
-const browser = await chromium.launch({ headless: !opts.headed })
-const context = await browser.newContext({ viewport: { width: 1280, height: 1600 }, acceptDownloads: true })
-const page = await context.newPage()
-page.on('pageerror', (e) => findings.push(`uncaught page error: ${e.message}`))
-// Every alert in this app is a failure path (see LevelDashboardPage's export
-// handlers), so one appearing is a finding, not noise.
-page.on('dialog', async (d) => {
-  findings.push(`DIALOG(${d.type()}): ${d.message()}`)
-  await d.accept()
-})
-
-log(`Phase B: level=${opts.level} route=${opts.route} frontend=${opts.frontend}`)
-
-await page.goto(opts.frontend)
-await page.getByRole('heading', { name: 'PickAxe Maze' }).click()
-await page.getByRole('heading', { name: 'Create New Maze' }).click()
-await page.waitForURL('**/pickaxe/new')
-await page.getByRole('heading', { name: new RegExp(`^${opts.level}$`, 'i') }).click()
-await page.waitForURL('**/pickaxe/dashboard')
-
-// Sheet info. The cover prints level + month/week; the year is captured here
-// but the cover template has no room for it (pdf_export_spec.md §3).
-const sheetName = `${opts.level[0].toUpperCase() + opts.level.slice(1)} Week 1`
-await page.locator('input[type="text"]').fill(sheetName)
-await page.locator('select').first().selectOption({ label: 'September' })
-await page.locator('input[type="number"]').last().fill('1')
-await page.locator('h1').click() // blur, so the last field commits
-
-// A new level is seeded with its full slate of empty slots across several rows
-// (not an empty sheet), so the work list is read straight off the dashboard.
-// waitFor() rather than count(): right after waitForURL the rows have not
-// re-rendered and a count reads 0.
-await page.locator('a[href^="/pickaxe/dashboard/"]').first().waitFor({ state: 'visible' })
-const slots = [
-  ...new Set(
-    await page
-      .locator('a[href^="/pickaxe/dashboard/"]')
-      .evaluateAll((els) => els.map((e) => e.getAttribute('href').split('/').pop())),
-  ),
-]
-log(`${slots.length} seeded slots: ${slots.join(', ')}`)
-
-const authored = []
-let usedReroll = false
-for (const [index, questionId] of slots.entries()) {
-  const star = Number(questionId.match(/-(\d+)star-/)[1])
-  const useManual = opts.route === 'manual' || (opts.route === 'mixed' && index % 2 === 0)
-  if (useManual) {
-    authored.push(await authorManually(page, questionId, star, findings))
-  } else {
-    const rerolls = opts.rerolls && !usedReroll
-    usedReroll ||= rerolls
-    authored.push(await authorByRandomize(page, questionId, star, { rerolls }))
+function prepareOutDir() {
+  fs.mkdirSync(opts.out, { recursive: true })
+  const stale = fs.readdirSync(opts.out).filter((f) => ARTIFACT_PATTERN.test(f))
+  if (!stale.length) return
+  if (!opts.clean) {
+    throw new Error(
+      `${opts.out} already holds ${stale.length} artifact(s) from an earlier run.\n` +
+        `Every export filename carries its own timestamp, so a second run would sit\n` +
+        `alongside them and the verifier could check the older worksheet instead.\n` +
+        `Pass --clean to replace them, or --out <dir> to keep both.`,
+    )
   }
-  log(`    dashboard: ${await page.locator('p.mt-1.text-sm.text-slate-600').innerText()}`)
+  for (const f of stale) fs.rmSync(path.join(opts.out, f))
+  log(`--clean: removed ${stale.length} artifact(s) from an earlier run`)
 }
 
-// --------------------------------------------------------------------------
-// Export — Preview, then Download, then Answer Key (PRODUCTION_PROCESS.md §4
-// step 2/3). Download deliberately hands over the exact bytes Preview cached,
-// so Preview has to happen first; Answer Key re-renders independently.
-// --------------------------------------------------------------------------
-
-const downloads = []
-page.on('download', (d) => downloads.push(d))
-
-// Counts are always a DELTA across one click, never a running total. Preview
-// opens its blob in a new tab, and headless Chromium resolves that to a
-// *download* (with a GUID filename) rather than to a PDF viewer — so a total
-// of 3 is reached before Answer Key has rendered anything, and waiting on a
-// total silently skips it. That is a headless artifact, not an app defect: a
-// real browser shows the preview in a tab.
-async function collect(label, expected, action) {
-  const before = downloads.length
-  await action()
-  for (let i = 0; i < 240 && downloads.length - before < expected; i++) await page.waitForTimeout(500)
-  const got = downloads.slice(before)
-  if (got.length < expected) throw new Error(`${label}: expected ${expected} download(s), saw ${got.length}`)
-  return got
+try {
+  prepareOutDir()
+} catch (e) {
+  console.error(e.message)
+  process.exit(2)
 }
 
-log('Preview')
-const popupPromise = page.waitForEvent('popup', { timeout: 120000 })
-await page.getByRole('button', { name: 'Preview' }).click()
-await (await popupPromise).close()
-
-// The PDF plus the progress .json that Download saves alongside it.
-const sheetFiles = await collect('Download', 2, () =>
-  page.getByRole('button', { name: 'Download', exact: true }).click(),
-)
-log(`Download -> ${sheetFiles.map((d) => d.suggestedFilename()).join(', ')}`)
-
-const keyFiles = await collect('Answer Key', 1, () => page.getByRole('button', { name: 'Answer Key' }).click())
-log(`Answer Key -> ${keyFiles.map((d) => d.suggestedFilename()).join(', ')}`)
-
+const findings = []
+const authored = []
 const saved = []
-for (const d of [...sheetFiles, ...keyFiles]) {
-  const name = d.suggestedFilename()
-  await d.saveAs(path.join(opts.out, name))
-  saved.push(name)
+let slots = []
+let browser
+let page
+let failure = null
+
+try {
+  browser = await chromium.launch({ headless: !opts.headed })
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1600 }, acceptDownloads: true })
+  page = await context.newPage()
+  page.on('pageerror', (e) => findings.push(`uncaught page error: ${e.message}`))
+  // Every alert in this app is a failure path (see LevelDashboardPage's export
+  // handlers), so one appearing is a finding, not noise.
+  page.on('dialog', async (d) => {
+    findings.push(`DIALOG(${d.type()}): ${d.message()}`)
+    await d.accept()
+  })
+
+  // Downloads are claimed BY FILENAME, never by arrival order or by counting.
+  // Preview opens its blob in a new tab and headless Chromium resolves that to
+  // a download of its own — a bare GUID.pdf — which races with the two exports
+  // that follow. Counting arrivals lets the progress .json satisfy the wait for
+  // the answer key, after which the answer key is never saved and the run still
+  // reports success. Every real export is named by buildExportFilename() as
+  // `pickaxe-<level>-...`, so the preview blob is trivially distinguishable.
+  // None of this is an app defect: a real browser shows the preview in a tab.
+  const downloads = []
+  const claimed = new Set()
+  page.on('download', (d) => downloads.push(d))
+
+  const claim = async (label, matches, timeoutMs = 180000) => {
+    for (let waited = 0; waited <= timeoutMs; waited += 250) {
+      const hit = downloads.find((d) => !claimed.has(d) && matches(d.suggestedFilename()))
+      if (hit) {
+        claimed.add(hit)
+        return hit
+      }
+      await page.waitForTimeout(250)
+    }
+    const seen = downloads.map((d) => d.suggestedFilename()).join(', ') || 'nothing'
+    throw new Error(`${label}: no matching download after ${timeoutMs}ms (saw: ${seen})`)
+  }
+
+  log(`Phase B: level=${opts.level} route=${opts.route} frontend=${opts.frontend}`)
+
+  await page.goto(opts.frontend)
+  await page.getByRole('heading', { name: 'PickAxe Maze' }).click()
+  await page.getByRole('heading', { name: 'Create New Maze' }).click()
+  await page.waitForURL('**/pickaxe/new')
+  await page.getByRole('heading', { name: new RegExp(`^${opts.level}$`, 'i') }).click()
+  await page.waitForURL('**/pickaxe/dashboard')
+
+  // Sheet info. The cover prints level + month/week; the year is captured here
+  // but the cover template has no room for it (pdf_export_spec.md §3).
+  await page.locator('input[type="text"]').fill(`${opts.level[0].toUpperCase() + opts.level.slice(1)} Week 1`)
+  await page.locator('select').first().selectOption({ label: 'September' })
+  await page.locator('input[type="number"]').last().fill('1')
+  await page.locator('h1').click() // blur, so the last field commits
+
+  // A new level is seeded with its full slate of empty slots across several
+  // rows (not an empty sheet), so the work list is read straight off the
+  // dashboard. waitFor() rather than count(): right after waitForURL the rows
+  // have not re-rendered and a count reads 0.
+  await page.locator('a[href^="/pickaxe/dashboard/"]').first().waitFor({ state: 'visible' })
+  slots = [
+    ...new Set(
+      await page
+        .locator('a[href^="/pickaxe/dashboard/"]')
+        .evaluateAll((els) => els.map((e) => e.getAttribute('href').split('/').pop())),
+    ),
+  ]
+  log(`${slots.length} seeded slots: ${slots.join(', ')}`)
+
+  let usedReroll = false
+  for (const [index, questionId] of slots.entries()) {
+    const star = Number(questionId.match(/-(\d+)star-/)[1])
+    const useManual = opts.route === 'manual' || (opts.route === 'mixed' && index % 2 === 0)
+    if (useManual) {
+      authored.push(await authorManually(page, questionId, star, findings))
+    } else {
+      const rerolls = opts.rerolls && !usedReroll
+      usedReroll ||= rerolls
+      authored.push(await authorByRandomize(page, questionId, star, { rerolls }))
+    }
+    log(`    dashboard: ${await page.locator('p.mt-1.text-sm.text-slate-600').innerText()}`)
+  }
+
+  // Export — Preview, then Download, then Answer Key (PRODUCTION_PROCESS.md §4
+  // step 2/3). Download deliberately hands over the exact bytes Preview cached,
+  // so Preview has to happen first; Answer Key re-renders independently.
+  const exportPrefix = `pickaxe-${opts.level}-`
+
+  log('Preview')
+  const popupPromise = page.waitForEvent('popup', { timeout: 120000 })
+  await page.getByRole('button', { name: 'Preview' }).click()
+  await (await popupPromise).close()
+
+  log('Download')
+  await page.getByRole('button', { name: 'Download', exact: true }).click()
+  const sheetPdf = await claim(
+    'Download (worksheet)',
+    (n) => n.startsWith(exportPrefix) && n.endsWith('.pdf') && !n.endsWith('-answer-key.pdf'),
+  )
+  const progressJson = await claim('Download (progress)', (n) => n.startsWith(exportPrefix) && n.endsWith('.json'))
+
+  log('Answer Key')
+  await page.getByRole('button', { name: 'Answer Key' }).click()
+  const keyPdf = await claim('Answer Key', (n) => n.endsWith('-answer-key.pdf'))
+
+  for (const d of [sheetPdf, progressJson, keyPdf]) {
+    const name = d.suggestedFilename()
+    await d.saveAs(path.join(opts.out, name))
+    saved.push(name)
+  }
+} catch (e) {
+  failure = e
+} finally {
+  // A run that dies halfway is exactly when its findings and its last screen
+  // are worth having, so both are written before anything is torn down. The
+  // earlier version threw straight out of the top level and lost all three.
+  if (page && !page.isClosed()) {
+    await page.screenshot({ path: path.join(opts.out, 'dashboard-final.png'), fullPage: true }).catch(() => {})
+  }
+  await browser?.close().catch(() => {})
+  fs.writeFileSync(
+    path.join(opts.out, 'run.json'),
+    JSON.stringify(
+      {
+        level: opts.level,
+        route: opts.route,
+        rerolls: opts.rerolls,
+        slots,
+        authored,
+        saved,
+        findings,
+        failed: failure ? String(failure.message ?? failure) : null,
+      },
+      null,
+      2,
+    ),
+  )
 }
-await page.screenshot({ path: path.join(opts.out, 'dashboard-final.png'), fullPage: true })
-await browser.close()
 
-fs.writeFileSync(
-  path.join(opts.out, 'run.json'),
-  JSON.stringify({ level: opts.level, route: opts.route, rerolls: opts.rerolls, slots, authored, saved, findings }, null, 2),
-)
-
-log(`saved to ${opts.out}`)
+log(`artifacts in ${opts.out}`)
 for (const name of saved) log(`  ${name}`)
+
+if (failure) {
+  console.error(`\nRUN FAILED after ${authored.length}/${slots.length || '?'} question(s): ${failure.message ?? failure}`)
+  console.error(`Partial artifacts and findings were still written to ${opts.out}/run.json`)
+}
 console.log('\n=== FINDINGS ===')
 console.log(findings.length ? findings.join('\n') : '(none)')
-console.log(`\nNext:  python scripts/verify_worksheet_pdf.py "${opts.out}"`)
-process.exit(findings.length ? 1 : 0)
+if (!failure) console.log(`\nNext:  python scripts/verify_worksheet_pdf.py "${opts.out}"`)
+process.exit(failure || findings.length ? 1 : 0)
