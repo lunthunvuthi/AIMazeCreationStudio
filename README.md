@@ -190,3 +190,40 @@ python scripts/run_backend.py                # :8000  generate / validate
 cd "Web App/frontend"    && npm run dev      # :5173  the app
 cd "Web App/pdf-service" && npm start        # :8010  Preview / Download / Answer Key
 ```
+
+## Driving a full worksheet run
+
+[`PRODUCTION_PROCESS.md`](PRODUCTION_PROCESS.md) §4 — author every question on the Level
+Dashboard, then export — is the thing worth checking after any change to the wizard, the
+dashboard or the renderer. Two scripts do it, and they need all three servers above
+running:
+
+```bash
+node scripts/phase_b_run.mjs --level primary --route mixed --rerolls
+python scripts/verify_worksheet_pdf.py phase-b-out/primary-mixed --png
+```
+
+The first drives the real app in Playwright: it authors every seeded slot — `--route
+manual` uses the Create Myself wizard, `randomize` uses Randomize, `mixed` alternates —
+then clicks Preview, Download and Answer Key, and saves the results under `phase-b-out/`
+(git-ignored). The second reads that exported pair back and checks page count, the cover's
+level and month/week, badge numbering and its left/right alternation, and that the answer
+key differs from the worksheet on exactly the question pages.
+
+`--help` lists the rest. Two things worth knowing:
+
+- The driver's `--frontend` points **the driver**. pdf-service renders against *its* own
+  `FRONTEND_URL`, so if Vite moved to `:5174` both need telling, or the export silently
+  comes back rendered against whatever is on `:5173`.
+- Start Vite with `VITE_FAST_ANIM=1` to cut the Randomize animation to ~5%; otherwise the
+  randomize route spends about 7 seconds per question.
+
+The verifier needs PyMuPDF, which is not installed by default:
+
+```bash
+pip install -e ".[phase-b]"
+```
+
+A green run proves less than it looks like: it never toggles a row's **Bonus** flag, never
+drags a question between rows, and never loads a saved progress file back in. The driver's
+header comment keeps that list current.

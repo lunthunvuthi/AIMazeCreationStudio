@@ -132,20 +132,36 @@ the PDF for user."*
    (`pdf_export_spec.md` §6). Built 2026-08-27: the dashboard's **Answer Key** button,
    alongside Preview/Download.
 
-**Validated end to end, twice.** This sequence has been driven through the real app on
-real dev servers, not asserted from the code:
+**Validated end to end.** This sequence has been driven through the real app on real dev
+servers, not asserted from the code:
 
 | Run | Level | Authoring route | Result |
 |---|---|---|---|
 | 2026-08-27 | `kinder`, 8 questions / 5 rows | all via **Randomize** | 7-page PDF + answer key |
 | 2026-08-28 | `advanced`, 10 questions / 6 rows | all via the **manual wizard** | 8-page PDF + answer key |
+| 2026-08-28 | `primary`, 9 questions / 5 rows | **mixed**, alternating routes, plus all three rerolls | 7-page PDF + answer key |
+| 2026-08-28 | `kinder`, 8 questions / 5 rows | **mixed**, alternating routes | 7-page PDF + answer key |
 
-Between them the two runs cover both authoring routes, both page-row shapes (1-question
-`large` and 2-question `small`), every star rating 1-8 — including the 6-8★ pickaxe-range
-control and the manual-only distraction-wall sub-step — and the answer key, which in both
-runs left the cover and last page pixel-identical and added an overlay to every question
-page. Still uncovered: **`primary` has never been run**, and neither worksheet is
-shippable content — both were throwaways.
+All three levels now export cleanly. Between them the runs cover both authoring routes —
+separately and interleaved on one sheet, where a question's provenance turns out to be
+invisible in print, as it should be — both page-row shapes (1-question `large` and
+2-question `small`), every star rating 1-8 including the 6-8★ pickaxe-range control and
+the manual-only distraction-wall sub-step, §6.6's three reroll controls, and the answer
+key, which in every run left the cover and last page pixel-identical and added an overlay
+to every question page. No app defects surfaced in any of them.
+
+Re-run any of it with the two scripts that encode it:
+
+```
+node scripts/phase_b_run.mjs --level primary --route mixed --rerolls
+python scripts/verify_worksheet_pdf.py phase-b-out/primary-mixed
+```
+
+The driver authors and exports; the verifier reads the exported pair back and checks it
+against the page contract above. Both are deliberately narrow — read the driver's header
+for what a green run does **not** cover (the Bonus toggle, drag-and-drop, and loading a
+saved progress file are all still hand-only), and note that **no worksheet produced so far
+is shippable content.** Every run has been a throwaway.
 
 **Consequence for the data model.** Because A9's tutorial is fixed, the cover no longer
 consumes a question, so *every* row in `pages[]` is a question page. The renderer was
