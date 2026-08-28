@@ -241,8 +241,8 @@ can use this" means — but it is a different kind of project from steps 1–8 o
 
 | Change | Notes |
 |---|---|
-| `LevelProgress.sheetId` | UUID. Prerequisite for everything. `storage_spike.md` §4 — do it first, on its own |
-| `formatVersion` → 3 | Migration slot already exists in `fileAdapter.parseLevelProgress` |
+| ~~`LevelProgress.sheetId`~~ | **Done 2026-08-28.** UUID, prerequisite for everything. `storage_spike.md` §4 |
+| ~~`formatVersion` → 3~~ | **Done 2026-08-28**, in `fileAdapter.parseLevelProgress` alongside the v1 migration |
 | `version` integer per sheet | Optimistic concurrency; reject-and-reload on mismatch |
 | New: `User`, `Sheet`, `SheetRevision`, `RosterEntry`, `Comment`, `Approval`, `AuditLog` | `SheetRevision` holds a frozen `LevelProgress` blob |
 
@@ -263,7 +263,13 @@ can use this" means — but it is a different kind of project from steps 1–8 o
 
 **Frontend**
 
-- Auth: sign-in screen, session context, role-gated rendering.
+- Auth: sign-in screen, session context, role-gated rendering. **Auth0** (owner's choice,
+  2026-08-28) rather than talking to Google directly — `@auth0/auth0-react`, Authorization
+  Code + PKCE. Login/logout alone needs no backend; it is honest to ship it early, as long
+  as everyone knows it is *decorative* until sheets actually live server-side. Two things
+  to verify against current Auth0 docs rather than assume: the free-tier MAU allowance, and
+  whether Token Vault is on the chosen plan. Do not ship with Auth0's development Google
+  keys — a real Google OAuth client is required.
 - `storage/BackendAdapter` alongside `fileAdapter` and `localStorageAdapter`. This is where
   `development_plan.md` §2's `ProgressStorageAdapter` interface finally earns its keep —
   with three implementations, the abstraction has something to prove itself against, which
@@ -297,7 +303,7 @@ Order-of-magnitude, for sequencing arguments only — **not estimates to plan ag
 
 | Step | Work | Size |
 |---|---|---|
-| 6.5 | `sheetId` + `formatVersion` 3 | ½ day |
+| 6.5 | `sheetId` + `formatVersion` 3 | **Done 2026-08-28** |
 | 7a | Auth, users, roles, CORS, authenticate pdf-service | 1–2 weeks |
 | 7b | Sheets + immutable revisions in Postgres, `BackendAdapter`, My work / Shared screens | 1–2 weeks |
 | 7c | Publish + comments | ~1 week |

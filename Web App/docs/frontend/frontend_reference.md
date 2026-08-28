@@ -111,10 +111,21 @@ exactly; comments in the file itself cross-reference each doc section. Key types
 - **`MazeQuestion`** — one dashboard slot: `question_id`, `difficulty_star`, `status`
   (`empty|in_progress|randomized|complete`), `origin` (`manual|random|null`), `maze`,
   `solutionTrace`, `seeds`.
-- **`LevelProgress`** — the save-file shape: `formatVersion: 1`, `mazeType`, `level`,
-  `sheetName`/`year`/`month`/`week` (sheet metadata, added after the format's initial
-  release — see `fileAdapter.ts`'s backward-compat defaulting, §6), `questions[]`,
-  `createdAt`/`updatedAt`.
+- **`LevelProgress`** — the save-file shape, currently **`formatVersion: 3`**:
+  `sheetId`, `mazeType`, `level`, `sheetName`/`year`/`month`/`week` (sheet metadata, added
+  after the format's initial release), `pages: PageRow[]`, `createdAt`/`updatedAt`.
+  Two migrations live in `fileAdapter.ts` (§6): v1's flat `questions[]` → `pages[]`
+  (2026-08-19), and v2 → v3's `sheetId` (2026-08-28). Both additive; every older save
+  file still loads.
+  - **`sheetId`** is a UUID minted once at `startNewLevel` and carried unchanged by every
+    action and by the export/import round trip. It exists because nothing could name a
+    sheet: `(level, year, month, week)` is editable from the dashboard *and* legitimately
+    non-unique. Opaque — never shown to a user, never used to derive a filename, page
+    number or sort order; only compared for equality. `sheetName` remains the human label.
+- **`PageRow`** — one page of the exported PDF: `pageId`, `questions` (1–2), `isBonus`.
+- **`flattenPages(pages)`** / **`hasAuthoredWork(progress)`** — helpers on the above;
+  the latter is the "is there anything here a user would mind losing?" test used before
+  replacing the store's sheet (§7.1).
 - **`CellState`** — the wizard's per-cell UI model: `kind` (`normal|start|goal`),
   `rightWall`/`bottomWall` (booleans, **not** the string tokens — see wall-ownership
   note below), `pathEdges` (`{u,r,l,d}` booleans for the Step-3 ideal-path overlay,
@@ -239,11 +250,24 @@ did not fit. What the two adapters *do* share is the parser — see `parseLevelP
   Filename pattern: `${mazeType}-${level}-${year}-${month}-week${week}-${stamp}.json`
   (`buildExportFilename`, which also takes a `suffix` for `-answer-key`).
 - **`parseLevelProgress(raw: unknown)`** — validates + migrates an already-parsed JSON
-  value, or throws a user-facing `Error`. Accepts `formatVersion` 1 or 2 and always
-  returns 2, migrating a v1 `questions[]` into `pages[]` via `packQuestionsIntoPages`.
+  value, or throws a user-facing `Error`. **This file owns every save-file migration**, and
+  they are applied on the way in, so the rest of the app only ever sees the current shape.
+  Accepts `formatVersion` 1, 2 or 3 and always returns **3**:
+  - v1 → v2: a flat `questions[]` becomes `pages[]` via `packQuestionsIntoPages`.
+  - v2 → v3: a `sheetId` is minted (`crypto.randomUUID()`). `pages[]` is unchanged
+    between 2 and 3, so both read identically.
+
   Checks `mazeType` is a known registry id and `level` a known `LevelName`.
   **Backward-compat defaulting:** `sheetName`/`year`/`month`/`week` default to
-  blank / current year / current month / `1` when absent.
+  blank / current year / current month / `1` when absent; `sheetId` is minted when absent
+  **or empty string** (an empty id is treated as missing, or every hand-edited file would
+  collide on `''`).
+
+  **The two sheetId semantics, both deliberate:** importing the *same pre-v3 file* twice
+  gives two different ids — two distinct sheets, because nothing in an old file is both
+  stable and unique, and hashing the contents would silently merge two teachers' separate
+  sheets started from one template. Importing a *v3 file* twice keeps one id, because the
+  id travels in the file — the same sheet on two machines must stay one sheet.
   **Split out of `parseLevelProgressFile` on 2026-08-28** so the localStorage autosave
   reads through exactly this code. That is the point: the autosave record is the same
   shape as an export file, and two copies of the version checks and the v1 migration
