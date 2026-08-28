@@ -2,6 +2,14 @@ import { create } from 'zustand'
 import type { LevelName, LevelProgress, MazeData, MazeQuestion, PageRow } from '../types/maze'
 import { flattenPages } from '../types/maze'
 import { getMazeType } from '../registry/mazeTypes'
+import {
+  discardAutosave,
+  flushAutosave,
+  onAutosaveStatus,
+  readAutosave,
+  scheduleAutosave,
+} from '../storage/localStorageAdapter'
+import type { AutosaveStatus } from '../storage/localStorageAdapter'
 
 function buildEmptyQuestion(level: LevelName, star: number, occurrence: number): MazeQuestion {
   return {
@@ -67,6 +75,11 @@ function mapQuestion(pages: PageRow[], questionId: string, fn: (q: MazeQuestion)
 
 interface LevelStore {
   current: LevelProgress | null
+  // Roadmap step 6. 'ok' the moment an autosave write lands, 'unavailable'
+  // if one is refused (storage disabled or full). Starts 'ok' — the honest
+  // value before the first write is unknown, and the UI's job is to warn
+  // about a *known* failure, not to nag about an untested one.
+  autosaveStatus: AutosaveStatus
   startNewLevel: (mazeTypeId: string, level: LevelName) => void
   loadLevel: (progress: LevelProgress) => void
   clearLevel: () => void
@@ -89,7 +102,13 @@ interface LevelStore {
 }
 
 export const useLevelStore = create<LevelStore>((set) => ({
-  current: null,
+  // Roadmap step 6 — the sheet from the last session comes back on load, so a
+  // refresh on the Level Dashboard now stays on the Level Dashboard instead of
+  // bouncing to "Choose a level" with the work gone. Synchronous on purpose:
+  // every screen treats `current === null` as "no sheet" and redirects, so an
+  // async hydration would race those guards and land the user on /new anyway.
+  current: readAutosave(),
+  autosaveStatus: 'ok',
 
   startNewLevel: (mazeTypeId, level) => {
     const now = new Date()
@@ -111,7 +130,12 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
   loadLevel: (progress) => set({ current: progress }),
 
-  clearLevel: () => set({ current: null }),
+  // Also drops the autosave. Without that, "discard" would put the sheet back
+  // on the next reload, which is the opposite of what the word means.
+  clearLevel: () => {
+    discardAutosave()
+    set({ current: null })
+  },
 
   updateSheetInfo: (patch) =>
     set((state) => {
@@ -394,3 +418,35 @@ export const useLevelStore = create<LevelStore>((set) => ({
       }
     }),
 }))
+
+// --- Roadmap step 6: autosave wiring (development_plan.md §2 Phase 2) ---
+//
+// Every action above already bumps `updatedAt`, so "the sheet changed" is
+// exactly "the `current` reference changed" — there is nothing for individual
+// actions to remember to call, and a future action cannot forget to.
+//
+// Kept here rather than in a component: mounting is not the trigger. A change
+// made on the wizard route has to be saved even though the dashboard that
+// would host such an effect is unmounted at the time.
+useLevelStore.subscribe((state, prev) => {
+  // The guard is load-bearing, not an optimization: setting `autosaveStatus`
+  // below re-enters this subscriber, and without it that would queue another
+  // write and recurse.
+  if (state.current === prev.current) return
+  if (state.current === null) return // clearLevel already discarded the record
+  scheduleAutosave(state.current)
+})
+
+onAutosaveStatus((status) => {
+  if (useLevelStore.getState().autosaveStatus !== status) {
+    useLevelStore.setState({ autosaveStatus: status })
+  }
+})
+
+// A reload or tab close can land inside scheduleAutosave's coalescing window,
+// which would lose the last edit — the precise failure this feature exists to
+// prevent. `pagehide` rather than `beforeunload`: it is the one that fires
+// reliably on mobile Safari, and it does not risk an "unsaved changes" prompt.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flushAutosave)
+}

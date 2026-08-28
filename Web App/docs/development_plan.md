@@ -43,17 +43,42 @@ are additive, not a rewrite.**
   = serialize the current `LevelProgress` object (§4) to a `.json` file download. "Resume"
   = drag-and-drop that JSON file back into the **Modify Maze** screen, which deserializes
   it straight back into the store.
-- **Phase 2 (future):** Add a `localStorage`/`IndexedDB` autosave alongside the file
-  export, so an accidental refresh/tab-close doesn't lose unsaved work. Purely additive —
-  same `LevelProgress` shape, just written to two places.
+- **Phase 2 — BUILT 2026-08-28** (`storage/localStorageAdapter.ts`): a `localStorage`
+  autosave alongside the file export, so an accidental refresh/tab-close doesn't lose
+  unsaved work. Additive as predicted — the stored record is a bare `LevelProgress`, the
+  same bytes the file export writes, read back through the same parser/migration.
+  **One slot, not a library:** it holds whatever sheet the store currently has, as a crash
+  net for the session in progress. A list of past work is Phase 3's job, not this one.
+  Details in `frontend/frontend_reference.md` §6; verified by `scripts/autosave_check.mjs`.
 - **Phase 3 (future):** Add backend-persisted accounts/projects (Postgres via FastAPI),
   so `LevelProgress` can be loaded/saved by ID instead of only by file.
+  **Spiked 2026-08-28** — [`storage_spike.md`](storage_spike.md) covers the options
+  (Google Drive direct vs. shared Drive vs. a backend), the concerns, and the decisions
+  the owner needs to make. Two findings from it belong here:
+  - **`LevelProgress` has no id.** Every remote store and the whole collaboration flow
+    needs one; `(level, year, month, week)` is user-editable and legitimately non-unique.
+    Adding `sheetId` + `formatVersion: 3` is the cheapest unblock and is now roadmap
+    step 6.5.
+  - **Google Drive can serve a single teacher** ("save my sheets, see them on reload") but
+    **cannot** serve the multi-user publish/approve/roster flow — Drive ACLs cannot express
+    "only a HeadTeacher may approve", and a roster has no home there. `storage_spike.md`
+    §3.3.
 
 **Design implication:** define a single `ProgressStorageAdapter` interface up front
 (`save(progress): Promise<void>`, `load(id?): Promise<LevelProgress>`,
 `list?(): Promise<Summary[]>`) with a `FileAdapter` implementation for Phase 1. Phase 2
 adds a `LocalStorageAdapter`, Phase 3 a `BackendAdapter` — the UI and store never need to
 change, only which adapter is wired in.
+
+**How that actually went, recorded 2026-08-28:** the interface was *not* built, at Phase 1
+or Phase 2. With one implementation it had nothing to prove itself against, and Phase 2's
+adapter turned out not to share the sketched signatures anyway — its `save` is
+fire-and-forget with a throttle, and its `load` takes no id because there is one slot. What
+the two implementations *did* need to share was the parser: `parseLevelProgress` is now
+exported from `fileAdapter.ts` and used by both, because two copies of the version checks
+and the formatVersion-1 migration was the real risk, not two call signatures. Expect the
+interface to become worthwhile at Phase 3, when there are three implementations and a
+genuine `list()`.
 
 ---
 
@@ -396,16 +421,61 @@ in §5).
 5. Simple in-app maze visual (§7), used across the wizard, Step 4 preview, and dashboard
    slot thumbnails. **Export PDF button ships disabled** — revisit once a designer
    delivers the real print template.
-6. *(Future)* `localStorage` autosave layer (Phase 2 persistence, §2).
-7. *(Future)* Backend-persisted accounts/projects (Phase 3 persistence, §2).
-8. *(Future)* Wire up real PDF export per `pdf_export_spec.md` (the print template has
-   arrived and is specced; the renderer is not yet built), replacing the disabled button
-   from step 5. Open decisions in that doc's §7 need resolving first (icon set,
-   answer-key delivery, backend-vs-frontend rendering).
+6. **Done 2026-08-28.** `localStorage` autosave layer (Phase 2 persistence, §2). The
+   store hydrates from the autosave at construction, so a refresh keeps the sheet and
+   stays on the Level Dashboard; writes coalesce in a 500 ms window and flush on
+   `pagehide`; the maze-type home gained a **Resume / Discard** card; the three paths that
+   replace the sheet (new level, file import, discard) confirm first once a maze has been
+   authored; a refused write shows a visible warning rather than failing silently.
+   Verified end to end in a real browser by `scripts/autosave_check.mjs` (20 checks).
+6.5. **`sheetId` + `formatVersion: 3`.** Half a day, and it unblocks every option in step 7
+   — see §2 and `storage_spike.md` §4. Not done because it changes the documented data
+   model (§4.3), which is the owner's call. **Doing it first is strictly cheaper than
+   folding it into 7b.**
+7. *(Future)* Backend-persisted accounts/projects (Phase 3 persistence, §2). Specced
+   2026-08-28 as a **multi-user workflow**, not just remote storage:
+   [`collaboration_workflow_spec.md`](collaboration_workflow_spec.md) — Teacher /
+   HeadTeacher roles, private drafts, publish, comments, approval of an immutable
+   *revision*, and a HeadTeacher-owned week × level roster with deadlines. Feasible with
+   no novel engineering, and the authoring core (wizard, randomizer, validator, dashboard,
+   PDF) is untouched — but it turns a single-user local tool into a deployed service with
+   accounts, a database and backups. Sub-steps, in dependency order:
+   - **7a** Google sign-in, `users` + roles, tighten `main.py`'s `allow_origins=["*"]`,
+     authenticate the pdf-service render endpoint. *Decide the test-login story here:*
+     Google blocks automated sign-in, so every browser-driven check in `scripts/` stops
+     working the day auth lands unless the backend offers a test-only path.
+   - **7b** Sheets + immutable revisions in Postgres, `BackendAdapter`, "My work" and
+     "Shared" screens, Alembic (there are no migrations today).
+   - **7c** Publish + comments.
+   - **7d** Roster + deadlines (soft: badges and sort order, no notifications in v1).
+   - **7e** Approval / revoke, audit log, and the approved PDF rendered **server-side from
+     the stored revision** — otherwise "approved" does not identify specific bytes.
+   - **7f** Admin: invites and role assignment.
+
+   **Blocked on the owner:** `collaboration_workflow_spec.md` §8 lists 14 questions, of
+   which #11 (one school per deployment or multi-tenant) must be answered *before* the
+   schema is written, and #14 (is this the near-term goal?) decides whether a Google Drive
+   integration or a local multi-sheet library is worth building in the meantime or is
+   throwaway work.
+8. **Largely done — status corrected 2026-08-28.** Real PDF export per
+   `pdf_export_spec.md`. The renderer, the `pdf-service`, and the dashboard's
+   Preview / Download / Answer Key actions all shipped (2026-08-21 / 2026-08-27) and have
+   been driven end to end for all three levels — see `PRODUCTION_PROCESS.md` §4's
+   validation table. This entry still said "the renderer is not yet built", which has been
+   false since 2026-08-21. What genuinely remains: the renderer still lives under
+   `src/spike/` behind the `/spike/pdf-preview` route, so `pdf_export_spec.md` §7 item 5
+   (renderer technology) is decided in practice but not yet cleaned up in the code, and
+   that doc's remaining §7 items stay open.
 9. **Done.** Level Dashboard page-row redesign per
    `level_dashboard_pagination_spec.md` — `pages[]` data model + migration (2026-08-21),
    Preview/Download actions (2026-08-21), drag-and-drop (2026-08-26). That doc has no
    unimplemented sections left; §5.1's whole-row dragging was scoped out, not deferred.
+10. *(Optional, after 7)* **Google Drive as a mirror** of approved artifacts — a
+   server-side, one-way export of the approved PDF + JSON into the school's Drive folder.
+   Deliberately placed after step 7 and deliberately server-side: browser-held Drive
+   tokens bring hour-long expiry mid-edit, last-write-wins clobbering and an untestable
+   OAuth path, none of which apply to a one-way export of an already-frozen artifact.
+   `storage_spike.md` §3.2 / §5.
 
 ---
 

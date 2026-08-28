@@ -2,7 +2,14 @@
 // Not the full ProgressStorageAdapter interface the doc sketches (save/load(id?)/list?()):
 // with only this one implementation so far, and Phase 1's "load" being a user-provided
 // File rather than an id lookup, the generic interface has nothing to prove itself
-// against yet. Reshape into that interface once Phase 2 (localStorage) needs it.
+// against yet.
+//
+// Phase 2 (localStorage autosave, storage/localStorageAdapter.ts) did NOT reshape it
+// into that interface either — see storage_spike.md §3 for why. It reuses the one thing
+// worth sharing, `parseLevelProgress` below: the autosaved record is byte-identical to
+// an exported save file, so it must go through the same validation and the same
+// formatVersion-1 migration. Two parsers that could drift is the actual risk here, not
+// two call signatures.
 
 import type { LevelName, LevelProgress, MazeQuestion, PageRow } from '../types/maze'
 import { getMazeType } from '../registry/mazeTypes'
@@ -64,14 +71,12 @@ function readFormatVersion2Pages(data: Record<string, unknown>): PageRow[] {
   })
 }
 
-export async function parseLevelProgressFile(file: File): Promise<LevelProgress> {
-  let raw: unknown
-  try {
-    raw = JSON.parse(await file.text())
-  } catch {
-    throw new Error('That file is not valid JSON.')
-  }
-
+// Validates + migrates an already-parsed JSON value into a current-format
+// LevelProgress, or throws a message fit to show a user. Split out from
+// parseLevelProgressFile so the localStorage autosave reads through exactly
+// this code — its stored record is the same shape as an export file, so it
+// inherits the same version checks and the same formatVersion-1 migration.
+export function parseLevelProgress(raw: unknown): LevelProgress {
   if (typeof raw !== 'object' || raw === null) {
     throw new Error('That file is not a valid level progress file.')
   }
@@ -109,4 +114,14 @@ export async function parseLevelProgressFile(file: File): Promise<LevelProgress>
     createdAt: typeof data.createdAt === 'string' ? data.createdAt : now.toISOString(),
     updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : now.toISOString(),
   } as unknown as LevelProgress
+}
+
+export async function parseLevelProgressFile(file: File): Promise<LevelProgress> {
+  let raw: unknown
+  try {
+    raw = JSON.parse(await file.text())
+  } catch {
+    throw new Error('That file is not valid JSON.')
+  }
+  return parseLevelProgress(raw)
 }

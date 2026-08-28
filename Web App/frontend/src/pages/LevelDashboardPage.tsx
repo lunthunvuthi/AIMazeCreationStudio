@@ -43,6 +43,7 @@ export default function LevelDashboardPage() {
   const { mazeTypeId } = useParams<{ mazeTypeId: string }>()
   const mazeType = mazeTypeId ? getMazeType(mazeTypeId) : undefined
   const current = useLevelStore((s) => s.current)
+  const autosaveStatus = useLevelStore((s) => s.autosaveStatus)
   const updateSheetInfo = useLevelStore((s) => s.updateSheetInfo)
   const addQuestionToRow = useLevelStore((s) => s.addQuestionToRow)
   const addNewPage = useLevelStore((s) => s.addNewPage)
@@ -235,6 +236,19 @@ export default function LevelDashboardPage() {
       <Link to={`/${mazeType.id}`} className="text-sm text-indigo-600 hover:underline">
         &larr; {mazeType.label}
       </Link>
+
+      {/* Roadmap step 6. Autosave failing silently is worse than no autosave:
+          the user stops downloading save files because they believe the app is
+          holding their work. Only ever shown after a write was actually
+          refused (storage disabled, or the origin's quota full) — never as a
+          precaution before the first write. */}
+      {autosaveStatus === 'unavailable' && (
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <strong className="font-medium">Autosave is not working</strong> — this browser refused to store
+          the sheet, so a refresh will lose it. Use <strong className="font-medium">Save Progress</strong> to
+          keep a file copy.
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between">
         <div>

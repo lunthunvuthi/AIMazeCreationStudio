@@ -42,7 +42,8 @@ frontend/src/
 ├── types/maze.ts                   # every shared TS type (data model + registry contract)
 ├── api/mazeApi.ts                  # fetch wrappers for the 2 backend endpoints
 ├── store/levelStore.ts             # Zustand store — the ONE source of truth for in-progress level
-├── storage/fileAdapter.ts          # JSON export/import (download + parse+validate)
+├── storage/fileAdapter.ts          # JSON export/import (download + parse+validate+migrate)
+├── storage/localStorageAdapter.ts  # Phase 2 autosave — ONE slot, crash net for the live session
 ├── registry/
 │   ├── mazeTypes.ts                 # MAZE_TYPES array + getMazeType() — the extensibility point
 │   └── pickaxe/                     # the only registered maze type today
@@ -175,8 +176,28 @@ To add a second maze type: create a new `registry/<type>/` folder with the same 
 ## 6. State & persistence
 
 ### `store/levelStore.ts` (Zustand)
-Single store, single piece of state: `current: LevelProgress | null`. No slices, no
-middleware (no persist/devtools). Every mutating action follows the same pattern:
+Single store. State: `current: LevelProgress | null` plus `autosaveStatus`. No slices and
+still no middleware — notably **not** zustand's `persist`: the autosave wiring at the
+bottom of the file is hand-rolled so that hydration goes through
+`fileAdapter.parseLevelProgress` (validation + the v1 migration), which `persist` would
+bypass.
+
+**Autosave wiring (2026-08-28), at the bottom of the file:**
+- `current` is initialised to `readAutosave()` — **synchronous** on purpose. Every screen
+  treats `current === null` as "no sheet" and redirects, so an async hydration would race
+  those guards and land the user on `/new` anyway.
+- A single `useLevelStore.subscribe` fires `scheduleAutosave` whenever the `current`
+  *reference* changes. Since every action already bumps `updatedAt`, that is exactly "the
+  sheet changed" — no action has to remember to save, and a future action cannot forget.
+  It lives here rather than in a component because mounting is not the trigger: an edit
+  made on the wizard route must be saved while the dashboard is unmounted.
+- The `if (state.current === prev.current) return` guard is **load-bearing, not an
+  optimization** — setting `autosaveStatus` re-enters the subscriber, and without it that
+  would queue another write and recurse.
+- `clearLevel()` also calls `discardAutosave()`; otherwise "discard" would put the sheet
+  back on the next reload.
+
+Every mutating action follows the same pattern:
 early-return the unchanged state if `current` is null, otherwise spread-update
 `questions[]` and bump `updatedAt`. Actions:
 - `startNewLevel(mazeTypeId, level)` — builds a fresh `LevelProgress` with
@@ -208,25 +229,68 @@ long-term identifier — don't rely on `question_id` for anything beyond "unique
 currently-existing slots").
 
 ### `storage/fileAdapter.ts` (Phase 1 persistence)
-Two functions, no class/interface — deliberately **not** yet the generic
-`ProgressStorageAdapter` interface `development_plan.md` §2 sketches for later phases;
-the comment at the top of the file explains why (only one implementation exists so far,
-so there's nothing to prove a generic interface against yet — reshape when Phase 2
-lands).
+Free functions, no class/interface — deliberately **not** the generic
+`ProgressStorageAdapter` interface `development_plan.md` §2 sketches. Phase 2 landed
+(2026-08-28) and still did not want it: the localStorage adapter's `save` is
+fire-and-forget with a throttle and its `load` takes no id, so the sketched signatures
+did not fit. What the two adapters *do* share is the parser — see `parseLevelProgress`.
 - `downloadLevelProgress(progress)` — serializes to pretty-printed JSON, triggers a
   browser download via an in-memory `Blob` + object URL + synthetic `<a click>`.
-  Filename pattern: `${mazeType}-${level}-${year}-${month}-week${week}-${stamp}.json`.
-- `parseLevelProgressFile(file)` — reads + `JSON.parse`s a `File`, validates
-  `formatVersion === 1`, `mazeType` is a known registry id, `level` is a known
-  `LevelName`, `questions` is an array — throws a user-facing `Error` message on any
-  failure. **Backward-compat defaulting:** `sheetName`/`year`/`month`/`week` are
-  defaulted (blank / current year / current month / `1`) if absent, so save files from
-  before those fields existed still load. There is no `formatVersion: 2` handling yet —
-  when the page-row redesign (`level_dashboard_pagination_spec.md`) ships, this
-  function is where its migration logic will need to go.
+  Filename pattern: `${mazeType}-${level}-${year}-${month}-week${week}-${stamp}.json`
+  (`buildExportFilename`, which also takes a `suffix` for `-answer-key`).
+- **`parseLevelProgress(raw: unknown)`** — validates + migrates an already-parsed JSON
+  value, or throws a user-facing `Error`. Accepts `formatVersion` 1 or 2 and always
+  returns 2, migrating a v1 `questions[]` into `pages[]` via `packQuestionsIntoPages`.
+  Checks `mazeType` is a known registry id and `level` a known `LevelName`.
+  **Backward-compat defaulting:** `sheetName`/`year`/`month`/`week` default to
+  blank / current year / current month / `1` when absent.
+  **Split out of `parseLevelProgressFile` on 2026-08-28** so the localStorage autosave
+  reads through exactly this code. That is the point: the autosave record is the same
+  shape as an export file, and two copies of the version checks and the v1 migration
+  drifting apart was the real risk.
+- `parseLevelProgressFile(file)` — `JSON.parse`s a `File`, then delegates to
+  `parseLevelProgress`. Thin wrapper.
 
-There is no Phase 2 (`localStorage`) or Phase 3 (backend-persisted) adapter
-implemented — only file-based save/load exists in code today.
+### `storage/localStorageAdapter.ts` (Phase 2 persistence, 2026-08-28)
+The crash net. Before it, a refresh or tab-close discarded an in-progress sheet outright
+and "Save Progress" was the only protection.
+
+**Scope is one slot, on purpose.** The stored value is a single bare `LevelProgress` —
+whatever the store currently holds. It is not a library of saved sheets; a multi-sheet
+local library needs a `sheetId`, a listing screen and a delete/rename story, and it is
+the first step of the Drive/backend work rather than the last step of this one
+(`storage_spike.md` §4).
+
+The record being a bare `LevelProgress`, byte-identical to what `downloadLevelProgress`
+writes, buys two things: it reads back through `parseLevelProgress` (one migration path),
+and the raw value can be copied out of devtools and dropped onto **Modify Maze** as a save
+file, so a stuck autosave is recoverable by hand.
+
+- Keys: `mazeStudio.autosave.v1`, plus `mazeStudio.autosave.v1.unreadable`.
+- `readAutosave()` → `LevelProgress | null`. **Never throws** — it runs during store
+  construction, where a throw is a blank screen. A record it cannot parse is *moved* to
+  the `.unreadable` key rather than deleted: a newer build could have written a format
+  this build does not understand, and delete-on-unreadable would destroy good work when
+  someone opens an older deployed build or an older cached tab.
+- `writeAutosave(progress)` → `boolean`. Returns whether the write landed. A silent
+  autosave failure is worse than a visible one, because the user stops downloading save
+  files believing the app has their work.
+- `scheduleAutosave(progress)` — a **leading-edge throttle**, 500 ms
+  (`WRITE_WINDOW_MS`), not a trailing debounce: a resetting debounce can be starved
+  indefinitely by continuous typing, which is exactly when staleness hurts most.
+  Consequence when testing: **localStorage lags the store by up to 500 ms.**
+- `flushAutosave()` — writes the queued change immediately. Wired to `pagehide`, so a
+  deliberate reload cannot land inside the throttle window and lose the last edit.
+  `pagehide` rather than `beforeunload`: it fires reliably on mobile Safari and risks no
+  "unsaved changes" prompt.
+- `discardAutosave()` — removes the record *and* cancels any queued write, or the throttle
+  would resurrect the sheet a few hundred ms after the user discarded it.
+- Every entry point tolerates `window.localStorage` **throwing on access**, not just on
+  read — Safari private mode and "block all cookies" both do that.
+
+Phase 3 (backend-persisted) is still unimplemented; see
+[`../collaboration_workflow_spec.md`](../collaboration_workflow_spec.md) and
+[`../storage_spike.md`](../storage_spike.md).
 
 ---
 
@@ -236,6 +300,24 @@ implemented — only file-based save/load exists in code today.
 Straightforward — no state beyond local UI state (drag-over highlight, error message).
 `ModifyMazePage` supports both drag-drop and a hidden `<input type=file>` triggered by a
 button; both paths converge on the same `handleFile()`.
+
+**Autosave touches three of these (2026-08-28).**
+- `MazeTypeHomePage` shows a **Resume / Discard** card when `current.mazeType` matches the
+  route's maze type. It needs no separate "read the autosave" call — the store hydrates
+  from localStorage at construction, so on a fresh page load `current` *is* last session's
+  sheet. Two entry points existed before ("Create New Maze" wipes it, "Modify Maze" wants a
+  file) and neither told the user the work was still there.
+- `NewLevelPage` and `ModifyMazePage` now `window.confirm` before replacing the sheet, gated
+  on `hasAuthoredWork(current)` (`types/maze.ts`: any question with a non-null `maze`).
+  These paths were harmless when a sheet died on refresh anyway; with one persistent
+  autosave slot they can now silently destroy work from a session days ago.
+  `hasAuthoredWork` deliberately ignores `sheetName`/`month`/`week` — those are seconds of
+  retyping, and prompting for them would make the dialog routine enough to click through.
+  `ModifyMazePage` checks *after* parsing, so an unreadable file cannot cost the user their
+  sheet via a prompt they answered for nothing.
+- Playwright note: `getByRole('link', {name: 'Resume'})` is ambiguous on
+  `MazeTypeHomePage` — "Modify Maze / Resume from a saved level file" also matches. Use
+  `exact: true`.
 
 ### 7.2 `LevelDashboardPage`
 - Computes `completeCount`/`allComplete` inline on every render (no memoization —
