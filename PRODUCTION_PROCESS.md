@@ -132,6 +132,21 @@ the PDF for user."*
    (`pdf_export_spec.md` §6). Built 2026-08-27: the dashboard's **Answer Key** button,
    alongside Preview/Download.
 
+**Validated end to end, twice.** This sequence has been driven through the real app on
+real dev servers, not asserted from the code:
+
+| Run | Level | Authoring route | Result |
+|---|---|---|---|
+| 2026-08-27 | `kinder`, 8 questions / 5 rows | all via **Randomize** | 7-page PDF + answer key |
+| 2026-08-28 | `advanced`, 10 questions / 6 rows | all via the **manual wizard** | 8-page PDF + answer key |
+
+Between them the two runs cover both authoring routes, both page-row shapes (1-question
+`large` and 2-question `small`), every star rating 1-8 — including the 6-8★ pickaxe-range
+control and the manual-only distraction-wall sub-step — and the answer key, which in both
+runs left the cover and last page pixel-identical and added an overlay to every question
+page. Still uncovered: **`primary` has never been run**, and neither worksheet is
+shippable content — both were throwaways.
+
 **Consequence for the data model.** Because A9's tutorial is fixed, the cover no longer
 consumes a question, so *every* row in `pages[]` is a question page. The renderer was
 changed to match on 2026-08-21 (it used to render `pages.slice(1)`, dropping `pages[0]`),
@@ -158,6 +173,13 @@ the other two are still open:
    than guessed.
 2. **Advanced has no last page of its own.** It reuses Primary's artwork, which is a
    deliberate stand-in, not a finished state — a dedicated Advanced page is still owed.
+   What the stand-in actually costs is now measured rather than assumed. A full Advanced
+   export on 2026-08-28 showed the borrowed page renders correctly full-bleed at A4 and
+   carries no Primary-specific wording — it names no level, so nothing on it reads as
+   *wrong* for Advanced. The gap is editorial (Advanced closes on Posuru and two Hatenyan
+   with "Well done! You did it!", inherited rather than chosen for it), not a shipping
+   blocker. Commission the artwork when the level ships for real; nothing is blocked on it
+   before then.
 3. **No second maze type has run this process.** The seam table in §3 is derived from
    reading the code, not from having actually shipped a second type through it. Expect it
    to be slightly wrong the first time it is used in anger — the camera / trampoline /
