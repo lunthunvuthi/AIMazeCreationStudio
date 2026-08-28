@@ -86,6 +86,16 @@ export function flattenPages(pages: PageRow[]): MazeQuestion[] {
   return pages.flatMap((page) => page.questions)
 }
 
+// "Is there anything here a user would mind losing?" — the test before an
+// action replaces the store's sheet (starting a new level, importing a file).
+// A freshly seeded level is all-`empty` slots and worth no warning; one
+// authored maze is. Deliberately ignores sheetName/month/week: those are a
+// few seconds of retyping, and warning about them would make the prompt
+// routine enough to be clicked through.
+export function hasAuthoredWork(progress: LevelProgress): boolean {
+  return flattenPages(progress.pages).some((q) => q.maze !== null)
+}
+
 export type CellKind = 'normal' | 'start' | 'goal'
 
 // §6.7.3 — "line segment active" flags for the ideal path, independent of walls.

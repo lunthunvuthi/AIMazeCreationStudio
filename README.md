@@ -230,3 +230,22 @@ pip install -e ".[phase-b]"
 A green run proves less than it looks like: it never toggles a row's **Bonus** flag, never
 drags a question between rows, and never loads a saved progress file back in. The driver's
 header comment keeps that list current.
+
+## Checking the autosave
+
+A third script covers the `localStorage` autosave (`development_plan.md` §9 step 6) — the
+thing that keeps a refresh from throwing away an in-progress sheet. It needs Vite and the
+backend, but not pdf-service:
+
+```bash
+node scripts/autosave_check.mjs                       # expects Vite on :5174
+BASE=http://localhost:5173 node scripts/autosave_check.mjs
+```
+
+20 checks: the record is written and is a bare `LevelProgress`; a reload keeps the sheet,
+the level and the dashboard route; an edit made inside the write-coalescing window is still
+flushed on navigation; the Resume/Discard card behaves; the three paths that replace the
+sheet confirm first only once a maze has actually been authored; and a corrupted record is
+quarantined rather than crashing the app or being deleted. One check authors a real maze via
+Randomize, which is why the backend is required — a sheet of empty slots would not prove
+the claim that matters.

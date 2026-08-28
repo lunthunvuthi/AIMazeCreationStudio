@@ -4,11 +4,13 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { getMazeType } from '../registry/mazeTypes'
 import { useLevelStore } from '../store/levelStore'
 import { parseLevelProgressFile } from '../storage/fileAdapter'
+import { hasAuthoredWork } from '../types/maze'
 
 export default function ModifyMazePage() {
   const { mazeTypeId } = useParams<{ mazeTypeId: string }>()
   const mazeType = mazeTypeId ? getMazeType(mazeTypeId) : undefined
   const loadLevel = useLevelStore((s) => s.loadLevel)
+  const current = useLevelStore((s) => s.current)
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -23,6 +25,18 @@ export default function ModifyMazePage() {
       const progress = await parseLevelProgressFile(file)
       if (progress.mazeType !== mazeType!.id) {
         throw new Error('This file is for a different maze type.')
+      }
+      // Same one-slot overwrite as NewLevelPage — see the note there. Checked
+      // after parsing so an unreadable file cannot cost the user their sheet
+      // via a prompt they answered for nothing.
+      if (
+        current &&
+        hasAuthoredWork(current) &&
+        !window.confirm(
+          'Loading this file replaces the sheet in progress. Anything not saved to a file is lost. Continue?',
+        )
+      ) {
+        return
       }
       loadLevel(progress)
       navigate(`/${mazeType!.id}/dashboard`)

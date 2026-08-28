@@ -1,6 +1,7 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { getMazeType } from '../registry/mazeTypes'
 import { useLevelStore } from '../store/levelStore'
+import { hasAuthoredWork } from '../types/maze'
 import type { LevelName } from '../types/maze'
 
 const LEVELS: { id: LevelName; label: string }[] = [
@@ -13,11 +14,25 @@ export default function NewLevelPage() {
   const { mazeTypeId } = useParams<{ mazeTypeId: string }>()
   const mazeType = mazeTypeId ? getMazeType(mazeTypeId) : undefined
   const startNewLevel = useLevelStore((s) => s.startNewLevel)
+  const current = useLevelStore((s) => s.current)
   const navigate = useNavigate()
 
   if (!mazeType) return <Navigate to="/" replace />
 
   function handleSelect(level: LevelName) {
+    // Roadmap step 6 made this path dangerous in a way it was not before. The
+    // autosave holds exactly one sheet, so starting a new level overwrites it,
+    // and it survives a refresh — meaning the sheet being overwritten can be
+    // work from a session days ago that the user never downloaded.
+    if (
+      current &&
+      hasAuthoredWork(current) &&
+      !window.confirm(
+        'Starting a new level replaces the sheet in progress. Anything not saved to a file is lost. Continue?',
+      )
+    ) {
+      return
+    }
     startNewLevel(mazeType!.id, level)
     navigate(`/${mazeType!.id}/dashboard`)
   }
