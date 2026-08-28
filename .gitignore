@@ -14,3 +14,7 @@ Maze-All-Contents/pickaxe-maze-creation/output/*
 
 Web App/spikes/pdf-renderer/output/*
 !Web App/spikes/pdf-renderer/output/.gitkeep
+
+# scripts/phase_b_run.mjs writes exported worksheets here. They are validation
+# runs, not content — a real worksheet is a deliverable, not a build artifact.
+phase-b-out/
