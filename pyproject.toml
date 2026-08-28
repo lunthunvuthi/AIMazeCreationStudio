@@ -10,6 +10,10 @@ dev = ["pytest", "httpx"]
 # Web App/spikes/pdf-renderer/ — throwaway renderer-tech comparison, not the
 # main app's dependencies. See that folder's README.
 pdf-renderer-spike = ["reportlab"]
+# scripts/verify_worksheet_pdf.py only. Not needed to run or test the app —
+# it reads an exported worksheet back and checks it against the page contract
+# in PRODUCTION_PROCESS.md §4.
+phase-b = ["pymupdf"]
 
 [project.scripts]
 pickaxe-maze = "pickaxe_maze.cli:main"
