@@ -186,6 +186,7 @@ export default function PdfPreviewSpikePage() {
       <CoverPage
         mazeType={fixture.mazeType}
         level={fixture.level}
+        year={fixture.year}
         month={fixture.month}
         week={fixture.week}
         onReady={handleCoverReady}

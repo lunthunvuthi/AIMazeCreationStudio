@@ -12,7 +12,7 @@ than hardcoded, so it works for any level:
 
 1. Page count is `len(pages) + 2` — one cover, one page per PageRow, one last
    page.
-2. The cover prints this sheet's level and month/week.
+2. The cover prints this sheet's level and its year/month/week.
 3. Each question page carries badge `i + 1`, and badges alternate left/right by
    parity (`pdf_export_spec.md` §4).
 4. The answer key is the same document with solutions added: cover and last
@@ -142,7 +142,12 @@ def main() -> int:
     print('\ncover')
     cover_text = sheet[0].get_text()
     report.check(progress['level'].capitalize() in cover_text, f'names the level "{progress["level"].capitalize()}"')
-    header = f'{MONTH_ABBR[progress["month"] - 1]} / Week{progress["week"]}'
+    # Format changed 2026-08-28: the year was added and "Week" shortened to
+    # "Wk", because "May 2026 / Week10" is 125.2pt against 121pt of header field
+    # while "May 2026 / Wk10" is 110.3pt and fits. See CoverPage.tsx's
+    # patchTemplate. Asserting the year matters — it is the whole point of that
+    # change, and a silent regression to "Aug / Wk1" would otherwise pass.
+    header = f'{MONTH_ABBR[progress["month"] - 1]} {progress["year"]} / Wk{progress["week"]}'
     report.check(header in cover_text, f'prints "{header}"')
 
     print('\nquestion pages — badge number and side (pdf_export_spec.md §4)')
