@@ -89,11 +89,38 @@ Static content, not derived from maze data except the header fields:
 - **Header bar:** "Think! Think!" logo (left) · `Name: ______` blank (center-left) ·
   vertical divider · level/period label (right), two lines:
   - Line 1: `LevelProgress.level`, capitalized (`Kinder` / `Primary` / `Advanced`).
-  - Line 2: `{MONTH_NAMES[month]} / Week{week}` — reuses the sheet metadata added to
-    `LevelProgress` this session (§4.3 of `development_plan.md`). **(ASSUMPTION)** —
-    the sample omits `year`; recommend adding it here (e.g. `July 2026 / Week4`) since
-    `LevelProgress` already tracks it and dashboards spanning multiple years would
-    otherwise be ambiguous.
+  - Line 2: `{MONTH_ABBR} {year} / Wk{week}` — e.g. `Sep 2026 / Wk1`. Reuses the sheet
+    metadata from `development_plan.md` §4.3.
+
+    **Resolved 2026-08-28 — the year is now printed.** This was an open question for a
+    week on the grounds that "there is no room for it in this field", which came from an
+    estimate rather than a measurement. Measured against the real Roboto-Bold at the
+    designer's own 14px, over every month × week 1..52, the field's 121pt (divider
+    x=450.30 to page border x=571.33) takes:
+
+    | candidate | worst case | width | fits |
+    |---|---|---|---|
+    | `{Mon} {year} / Week{w}` | `May 2026 / Week10` | 125.2pt | **no** |
+    | `{Mon} {year} / Wk{w}` | `May 2026 / Wk10` | 110.3pt | **yes**, 5.4pt clear each side |
+    | `{Mon} {year} / W{w}` | `May 2026 / W10` | 102.8pt | yes, but `W10` reads worse |
+    | `{Mon} {year} / Week{w}` at 12px | — | 99.1pt | yes, below the designer's size |
+
+    So the year fits at full size only with **Week → Wk**. Two further findings from the
+    same measurement: the month must stay abbreviated (`September / Week1` is 123.9pt,
+    over even when perfectly centred), and putting the year on line 1 instead is not an
+    option (`Advanced 2026` at 18px is 126.0pt).
+
+    It also required a positioning change. The designer left-anchors both lines at x
+    values chosen for the sample strings `Kinder` / `Aug / Week1`, so a longer value grows
+    rightward toward the page border — `Advanced` and a two-digit week both push that way.
+    Both lines are now `text-anchor="middle"` on the field's centre (510.815), so growth
+    is shared between the two margins. Verified by rendering a real PDF for
+    `Advanced / May 2026 / Wk10`, `Primary / Sep 2030 / Wk52` and
+    `Advanced / Dec 2026 / Wk1`, and reading the text nodes' bounding boxes back in user
+    units — all clear both the divider and the border.
+
+    `scripts/verify_worksheet_pdf.py` asserts the new string, **including the year**, so a
+    silent regression to the yearless form fails the run.
 - **Title banner:** full-width bar, **measured as a plain gray fill (`#9D9F9E`), not
   colored** (corrects this doc's original amber/colored-banner guess), with a large
   title (sample: "Let's do it", no exclamation mark) and the Hatenyan mascot icon.

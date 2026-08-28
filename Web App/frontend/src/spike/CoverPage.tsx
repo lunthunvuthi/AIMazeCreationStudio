@@ -69,6 +69,15 @@ const SANS_STACK = "Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
 // Title band (polyline): x 24.09 .. 571.18   y 130.80 .. 213.01
 // Direction container:   x 70.87 .. 524.41   y 272.25 .. 669.10  (rx 13.26)
 // "Direction" pill:      x 94.75 .. 186.19   y 290.31 .. 312.99
+// Header divider (line): x 450.30            y  63.81 .. 106.33
+// Level field text:      translate(473.92 82.49)   18px Roboto-Bold
+// Period field text:     translate(460.72 102.53)  14px Roboto-Bold
+// The level / period block lives between the header's vertical divider and the
+// page border, so this is the horizontal room it actually has. Both header lines
+// are re-anchored to its centre — see `fillHeaderField`.
+const HEADER_FIELD = { left: 450.3, right: 571.33 }
+const HEADER_CENTRE = (HEADER_FIELD.left + HEADER_FIELD.right) / 2 // 510.815
+
 const BODY = { x: 23.96, y: 213.01, w: 547.37, h: 603.02 }
 const BOX = { x: 70.87, y: 272.25, w: 453.54, h: 396.85 }
 
@@ -192,7 +201,7 @@ function ExampleMaze({
 // moment the designer nudges that text. Inlining keeps the file itself untouched
 // on disk while still letting the real LevelProgress values land in the real
 // text nodes.
-function patchTemplate(raw: string, level: string, month: number, week: number): string {
+function patchTemplate(raw: string, level: string, year: number, month: number, week: number): string {
   let svg = raw.slice(raw.indexOf('<svg'))
 
   // An inline <svg>'s <style> block is document-global, and the designer's
@@ -213,34 +222,78 @@ function patchTemplate(raw: string, level: string, month: number, week: number):
     .replace('</defs>', '<style>.fcv-cls-2 { stroke-width: 1.8px; stroke: #808285; }</style></defs>')
 
   const monthAbbr = MONTH_NAMES[month - 1].slice(0, 3)
-  // Abbreviated deliberately: the field starts at x=460.72 and the page border
-  // is at x=571.33, so a full month name ("September / Week4" at 14px) overflows
-  // off the page. The template's own placeholder is abbreviated for the same
-  // reason. pdf_export_spec.md §3 suggests also showing the year here; there is
-  // no room for it in this field, so that stays an open question.
-  return replaceTspan(
-    replaceTspan(svg, 'Kinder', level.charAt(0).toUpperCase() + level.slice(1)),
+  // The month stays abbreviated: "September / Week1" measures 123.9pt against
+  // 121pt of field, so a full month name overflows the page border even when
+  // perfectly centred. The template's own placeholder is abbreviated for the
+  // same reason.
+  //
+  // The YEAR is included as of 2026-08-28, closing pdf_export_spec.md §3's open
+  // question. That question recorded "there is no room for it", which came from
+  // an estimate; measured against the real Roboto-Bold at the designer's 14px,
+  // the worst case of every month x week 1..52 is:
+  //
+  //     May 2026 / Week10   125.2pt   does NOT fit (121pt of field)
+  //     May 2026 / Wk10     110.3pt   fits, 5.3pt clear each side   <- chosen
+  //     May 2026 / W10      102.8pt   fits, but "W10" reads worse
+  //     May 2026 / Week10   at 12px    99.1pt  fits, below designer's size
+  //
+  // So the year fits at full size only with "Week" shortened to "Wk". If the
+  // owner prefers a different label, this template string is the only thing to
+  // change — the centring below absorbs any width.
+  return fillHeaderField(
+    fillHeaderField(svg, 'Kinder', level.charAt(0).toUpperCase() + level.slice(1)),
     'Aug / Week1',
-    `${monthAbbr} / Week${week}`,
+    `${monthAbbr} ${year} / Wk${week}`,
   )
 }
 
+// Substitutes one header field's placeholder text AND re-anchors that line to
+// the centre of the field, so the string's width no longer decides where it
+// sits.
+//
+// The designer left-anchors both lines ("Kinder" at x=473.92, "Aug / Week1" at
+// x=460.72) at widths chosen for those exact sample strings — each is centred on
+// x≈500.5 for the sample values and drifts as soon as the value changes length.
+// "Advanced" and a two-digit week both push right, toward the page border. With
+// `text-anchor="middle"` the line self-centres at any length, which is what
+// makes the year affordable: the growth is shared between both margins instead
+// of all landing on the border side.
+//
+// Both lines move to the same centre (510.815, the geometric middle of
+// divider..border) rather than the designer's ~500.5, for two reasons: they must
+// share a centre or they visually misalign with each other, and 500.5 leaves
+// only 100.4pt of symmetric room — not enough for the year at full size. The
+// visible effect is a ~10pt rightward shift of a two-line block that currently
+// sits with a 10pt gap on its left and a 30pt gap on its right, so it reads as
+// better balanced, not moved.
+//
 // Throws rather than silently leaving the placeholder in place: if a future
 // version of Front Cover.svg renames or restructures these fields, a failed
 // export is a much better outcome than a worksheet that says "Kinder" on every
 // Primary sheet.
-function replaceTspan(svg: string, placeholder: string, value: string): string {
-  const needle = `<tspan x="0" y="0">${placeholder}</tspan>`
-  if (!svg.includes(needle)) {
+function fillHeaderField(svg: string, placeholder: string, value: string): string {
+  // Matches the whole <text> wrapper so the transform can be rewritten with it.
+  // The y offset is captured and kept — only x moves.
+  const pattern = new RegExp(
+    `<text([^>]*?)transform="translate\\(([\\d.]+) ([\\d.]+)\\)"([^>]*)><tspan x="0" y="0">${placeholder}</tspan></text>`,
+  )
+  const match = svg.match(pattern)
+  if (!match) {
     throw new Error(`Front Cover.svg has no "${placeholder}" header field to fill in — template changed shape?`)
   }
+  const [, before, , y, after] = match
   const escaped = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  return svg.replace(needle, `<tspan x="0" y="0">${escaped}</tspan>`)
+  return svg.replace(
+    pattern,
+    `<text${before}transform="translate(${HEADER_CENTRE} ${y})"${after} text-anchor="middle">` +
+      `<tspan x="0" y="0">${escaped}</tspan></text>`,
+  )
 }
 
 export interface CoverPageProps {
   mazeType: string
   level: string
+  year: number
   month: number
   week: number
   // Fired once the template markup is in the DOM *and* webfonts have finished
@@ -250,7 +303,7 @@ export interface CoverPageProps {
   onReady?: () => void
 }
 
-export default function CoverPage({ mazeType, level, month, week, onReady }: CoverPageProps) {
+export default function CoverPage({ mazeType, level, year, month, week, onReady }: CoverPageProps) {
   const content = coverContentFor(mazeType)
   const [template, setTemplate] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -264,7 +317,7 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
       })
       .then((raw) => {
         if (cancelled) return
-        setTemplate(patchTemplate(raw, level, month, week))
+        setTemplate(patchTemplate(raw, level, year, month, week))
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
@@ -272,7 +325,7 @@ export default function CoverPage({ mazeType, level, month, week, onReady }: Cov
     return () => {
       cancelled = true
     }
-  }, [level, month, week])
+  }, [level, year, month, week])
 
   useEffect(() => {
     if (!template) return
