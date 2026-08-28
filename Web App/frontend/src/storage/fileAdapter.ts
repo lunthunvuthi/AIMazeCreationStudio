@@ -10,6 +10,10 @@
 // an exported save file, so it must go through the same validation and the same
 // formatVersion-1 migration. Two parsers that could drift is the actual risk here, not
 // two call signatures.
+//
+// This file owns EVERY save-file migration. As of formatVersion 3 there are two
+// (1 -> pages[], 2 -> sheetId), both additive, and both applied on the way in so the rest
+// of the app only ever sees the current shape.
 
 import type { LevelName, LevelProgress, MazeQuestion, PageRow } from '../types/maze'
 import { getMazeType } from '../registry/mazeTypes'
@@ -82,7 +86,7 @@ export function parseLevelProgress(raw: unknown): LevelProgress {
   }
   const data = raw as Record<string, unknown>
 
-  if (data.formatVersion !== 1 && data.formatVersion !== 2) {
+  if (data.formatVersion !== 1 && data.formatVersion !== 2 && data.formatVersion !== 3) {
     throw new Error('Unsupported save file version.')
   }
   if (typeof data.mazeType !== 'string' || !getMazeType(data.mazeType)) {
@@ -92,18 +96,39 @@ export function parseLevelProgress(raw: unknown): LevelProgress {
     throw new Error('Unknown level in this save file.')
   }
 
+  // formatVersion 3 changed nothing about pages[] — it only added sheetId — so
+  // 2 and 3 read identically here.
   const pages = data.formatVersion === 1 ? migrateFormatVersion1(data) : readFormatVersion2Pages(data)
 
   // Sheet metadata was added after this format was first used — default it in
   // for save files exported before that, rather than rejecting them.
   const now = new Date()
+
+  // formatVersion 1 and 2 files predate sheetId, so one is minted here. Two
+  // consequences worth being explicit about, because both are correct:
+  //
+  //  * Importing the SAME pre-v3 file twice produces two different ids, i.e.
+  //    two distinct sheets. There is no information in an old file that could
+  //    say otherwise — no field in it is both stable and unique (see the
+  //    sheetId doc comment in types/maze.ts) — and inventing a hash of the
+  //    contents would be worse: it would silently merge two teachers' separate
+  //    sheets that happen to start from the same template.
+  //  * Importing a v3 file twice keeps ONE id, because the id travels in the
+  //    file. That is the whole point: it is the same sheet, moved between two
+  //    machines, and a later backend must recognise it as such.
+  //
+  // An empty string is treated as absent, so a hand-edited or truncated file
+  // cannot produce a sheet whose id collides with every other such sheet.
+  const sheetId =
+    typeof data.sheetId === 'string' && data.sheetId.length > 0 ? data.sheetId : crypto.randomUUID()
   const sheetName = typeof data.sheetName === 'string' ? data.sheetName : ''
   const year = typeof data.year === 'number' ? data.year : now.getFullYear()
   const month = typeof data.month === 'number' && data.month >= 1 && data.month <= 12 ? data.month : now.getMonth() + 1
   const week = typeof data.week === 'number' ? data.week : 1
 
   return {
-    formatVersion: 2,
+    formatVersion: 3,
+    sheetId,
     mazeType: data.mazeType,
     level: data.level,
     sheetName,

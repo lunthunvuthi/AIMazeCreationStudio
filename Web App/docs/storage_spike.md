@@ -146,7 +146,14 @@ Not a matter of effort — of expressiveness:
 
 ---
 
-## 4. The gap nobody has noticed yet: sheets have no identity
+## 4. The gap nobody had noticed: sheets had no identity
+
+> **RESOLVED 2026-08-28.** `sheetId` + `formatVersion: 3` shipped as roadmap step 6.5.
+> The rest of this section is the argument that led to it, kept because the *semantics*
+> below still govern how the id behaves. Implementation: `types/maze.ts` (the field and
+> its doc comment), `store/levelStore.ts` (`startNewLevel` mints it),
+> `storage/fileAdapter.ts` (`parseLevelProgress` defaults it in for pre-v3 files).
+> Nine checks in `scripts/autosave_check.mjs` cover it.
 
 Every remote-storage option, and the entire collaboration flow, needs to name a sheet.
 `LevelProgress` currently has no id. The nearest thing is
@@ -159,15 +166,24 @@ Consequences of the gap:
 - Backend: no primary key, no `PUT /api/sheets/:id`.
 - Even locally: a multi-sheet library cannot key its entries.
 
-**This is the cheapest high-leverage change on the page** — add `sheetId` (a UUID stamped
+**This was the cheapest high-leverage change on the page** — add `sheetId` (a UUID stamped
 at `startNewLevel`, preserved by import), bump to `formatVersion: 3`, and default it in for
 older files exactly as `sheetName`/`year`/`month`/`week` are defaulted today. The migration
-path already exists in `fileAdapter.parseLevelProgress`; the pdf-service's payload
-validator only checks `pages[]`, so it is unaffected. Roughly half a day, and it unblocks
-both branches.
+path already existed in `fileAdapter.parseLevelProgress`; the pdf-service's payload
+validator only checks `pages[]`, so it was unaffected. It took about half a day as
+estimated.
 
-It is listed as a decision rather than done because it changes the documented data model
-(`development_plan.md` §4.3), which is the owner's call.
+**Two semantics that were decided while building it**, and that a backend must respect:
+
+- **Importing the same pre-v3 file twice produces two different ids** — two distinct
+  sheets. There is no information in an old file that could say otherwise, and hashing the
+  contents would be worse: it would silently merge two teachers' separate sheets that
+  happen to start from the same template.
+- **Importing a v3 file twice keeps one id**, because the id travels in the file. That is
+  the point — the same sheet moved between two machines must be recognised as one.
+
+An empty-string `sheetId` is treated as absent, so a hand-edited or truncated file cannot
+produce a sheet whose id collides with every other such file.
 
 ### The local library, if it is wanted for its own sake
 
@@ -259,7 +275,7 @@ Recommendations included, because none of these is a coin toss.
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
 | D1 | Is Drive the **system of record** or a **mirror**? | Mirror, later, server-side | §3.3, §5 |
-| D2 | Add `sheetId` and bump to `formatVersion: 3` now? | **Yes** | Cheapest unblock on the page; §4 |
+| D2 | Add `sheetId` and bump to `formatVersion: 3` now? | ~~Yes~~ **DONE 2026-08-28** | Cheapest unblock on the page; §4 |
 | D3 | Build the local multi-sheet library first? | Only if a single teacher must be productive before the multi-user work | Throwaway under Option C; §4 |
 | D4 | Identity provider | **Google Sign-In (OIDC)** | Schools already have Workspace accounts; no password storage; and it is the same consent plumbing if Drive export happens later |
 | D5 | Where do roster + approvals live? | Backend database | §3.3 — nowhere else can enforce them |
@@ -280,7 +296,7 @@ Assuming the collaboration flow is the goal (see the blocking question above):
 | Step | Work | Rough size |
 |---|---|---|
 | 6 | `localStorage` autosave | **Done 2026-08-28** |
-| 6.5 | `sheetId` + `formatVersion` 3 | ½ day |
+| 6.5 | `sheetId` + `formatVersion` 3 | **Done 2026-08-28** |
 | 7a | Google sign-in, `users` table, tighten CORS, authenticate `pdf-service` | 1–2 weeks |
 | 7b | Sheets in Postgres: `BackendAdapter`, "My Sheets" library, immutable revisions | 1–2 weeks |
 | 7c | Roles, publish, comments | ~1 week |
@@ -292,5 +308,13 @@ Sizes are order-of-magnitude, for sequencing arguments only — they are not est
 anybody should plan against. The breakdown per step is in
 [`collaboration_workflow_spec.md`](collaboration_workflow_spec.md) §7.
 
-Skipping 6.5 does not save time; it just moves the cost into 7b where it is more
-expensive.
+Skipping 6.5 would not have saved time; it would only have moved the cost into 7b, where
+the migration would have been one more thing inside a much larger diff.
+
+**Decision recorded 2026-08-28:** the owner chose the backend path (D1 mirror, D3 no local
+library) with **Auth0** as the identity provider, revising D4 from plain Google Sign-In. The
+reasoning is in `collaboration_workflow_spec.md` §7 — briefly, wanting a login screen is
+what rules out the local library (per-browser storage is a promise a login cannot keep), and
+it also removes Drive's main advantage, since Auth0-to-Google Drive scopes need server-side
+token handling anyway. Once a server exists, a `sheets` table is less work than Drive's
+token plumbing *and* counts toward step 7 instead of being thrown away.

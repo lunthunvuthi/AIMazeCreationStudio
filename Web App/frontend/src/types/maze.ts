@@ -61,13 +61,31 @@ export interface PageRow {
 }
 
 // §4.3 — the file that gets saved/loaded.
+//
 // formatVersion 2 (level_dashboard_pagination_spec.md §2.2, 2026-08-19)
 // replaced a flat `questions[]` with `pages: PageRow[]` so the Level
 // Dashboard authors page/row structure directly rather than a renderer
-// guessing it after the fact — see storage/fileAdapter.ts for the
-// formatVersion 1 migration.
+// guessing it after the fact.
+//
+// formatVersion 3 (2026-08-28) added `sheetId`. See storage/fileAdapter.ts for
+// both migrations — they are additive, so every older save file still loads.
 export interface LevelProgress {
-  formatVersion: 2
+  formatVersion: 3
+  // Stable identity for this sheet, minted once and never changed by any edit.
+  //
+  // Added ahead of the storage work in storage_spike.md §4, which found that
+  // nothing could name a sheet: the nearest thing was
+  // `(level, year, month, week)`, which is editable from the dashboard AND
+  // legitimately non-unique — two teachers both authoring "Primary, Sep,
+  // week 1" is the point of a publish-and-choose flow, not a collision to
+  // prevent. Without an id, "update the existing sheet" versus "create a
+  // second one" is undecidable for Drive, for a backend, and even for a
+  // multi-sheet local library.
+  //
+  // Deliberately opaque and never shown to a user: `sheetName` is the human
+  // label and stays freely editable. Nothing derives a filename, a page number
+  // or a sort order from this — it is only ever compared for equality.
+  sheetId: string
   mazeType: string // registry key, see §5
   level: LevelName
   sheetName: string // user-editable label, e.g. "Kinder Week 2"

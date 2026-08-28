@@ -114,7 +114,12 @@ export const useLevelStore = create<LevelStore>((set) => ({
     const now = new Date()
     set({
       current: {
-        formatVersion: 2,
+        formatVersion: 3,
+        // Minted once, here, and carried untouched by every action below and by
+        // the export/import round trip — see types/maze.ts's doc comment.
+        // crypto.randomUUID needs a secure context; the app already relies on
+        // it for newPageId(), so this adds no new requirement.
+        sheetId: crypto.randomUUID(),
         mazeType: mazeTypeId,
         level,
         sheetName: '',

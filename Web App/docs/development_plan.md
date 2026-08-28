@@ -55,10 +55,10 @@ are additive, not a rewrite.**
   **Spiked 2026-08-28** — [`storage_spike.md`](storage_spike.md) covers the options
   (Google Drive direct vs. shared Drive vs. a backend), the concerns, and the decisions
   the owner needs to make. Two findings from it belong here:
-  - **`LevelProgress` has no id.** Every remote store and the whole collaboration flow
-    needs one; `(level, year, month, week)` is user-editable and legitimately non-unique.
-    Adding `sheetId` + `formatVersion: 3` is the cheapest unblock and is now roadmap
-    step 6.5.
+  - **`LevelProgress` had no id — fixed 2026-08-28.** Every remote store and the whole
+    collaboration flow needs one; `(level, year, month, week)` is user-editable and
+    legitimately non-unique. `sheetId` + `formatVersion: 3` shipped as roadmap step 6.5;
+    see §4.3.
   - **Google Drive can serve a single teacher** ("save my sheets, see them on reload") but
     **cannot** serve the multi-user publish/approve/roster flow — Drive ACLs cannot express
     "only a HeadTeacher may approve", and a roster has no home there. `storage_spike.md`
@@ -138,16 +138,35 @@ type MazeQuestion = {
 
 ### 4.3 `LevelProgress` (the file that gets saved/loaded)
 
-**Superseded 2026-08-19 — implemented 2026-08-19.** The shape below (`formatVersion: 1`,
-flat `questions[]`) is what shipped originally; `level_dashboard_pagination_spec.md` §2
-replaced `questions[]` with `pages: PageRow[]` (`formatVersion: 2`) so the Level
-Dashboard can author page/row structure directly, and added a per-row `isBonus` flag
-(§4.4) for the exported PDF's laurel-wreath marker. Both are implemented in
-`types/maze.ts`/`store/levelStore.ts`/`storage/fileAdapter.ts` (migration included) as
-of 2026-08-19 — the drag-and-drop reordering mechanics in that spec's §5 are **not**
-implemented yet (dashboard UI is a plain row list, no `@dnd-kit` integration). This
-snippet is kept for history; `level_dashboard_pagination_spec.md` §2 is the current
-shape.
+**Superseded twice. The snippet below is `formatVersion: 1`, kept for history.**
+The current shape is `formatVersion: 3`:
+
+- **`formatVersion: 2`** (2026-08-19, `level_dashboard_pagination_spec.md` §2) replaced
+  flat `questions[]` with `pages: PageRow[]` so the Level Dashboard authors page/row
+  structure directly, and added a per-row `isBonus` flag (§4.4) for the exported PDF's
+  laurel-wreath marker. Drag-and-drop reordering (that spec's §5) landed 2026-08-26.
+- **`formatVersion: 3`** (2026-08-28) added **`sheetId: string`** — a UUID minted once at
+  `startNewLevel` and carried unchanged by every edit and by the export/import round
+  trip. `storage_spike.md` §4 is why: nothing could name a sheet. The nearest thing was
+  `(level, year, month, week)`, which is editable from the dashboard **and** legitimately
+  non-unique — two teachers both authoring "Primary, Sep, week 1" is the point of a
+  publish-and-choose flow, not a collision to prevent. Without an id, "update the
+  existing sheet" versus "create a second one" is undecidable for Drive, for a backend,
+  and even for a multi-sheet local library.
+
+  It is opaque and never shown to a user; `sheetName` remains the human label. Nothing
+  derives a filename, page number or sort order from it — it is only compared for
+  equality.
+
+Both migrations are additive and live in `storage/fileAdapter.ts`'s
+`parseLevelProgress`, applied on the way in, so the rest of the app only ever sees the
+current shape and **every older save file still loads**. A pre-v3 file has a `sheetId`
+minted for it on import, which means importing the same old file twice yields two
+distinct sheets — correct, since no field in an old file is both stable and unique. A v3
+file keeps its id, so moving a sheet between two machines stays one sheet.
+
+Current field list: `formatVersion` · `sheetId` · `mazeType` · `level` · `sheetName` ·
+`year` · `month` · `week` · `pages` · `createdAt` · `updatedAt`.
 
 ```ts
 type LevelProgress = {
@@ -428,10 +447,13 @@ in §5).
    replace the sheet (new level, file import, discard) confirm first once a maze has been
    authored; a refused write shows a visible warning rather than failing silently.
    Verified end to end in a real browser by `scripts/autosave_check.mjs` (20 checks).
-6.5. **`sheetId` + `formatVersion: 3`.** Half a day, and it unblocks every option in step 7
-   — see §2 and `storage_spike.md` §4. Not done because it changes the documented data
-   model (§4.3), which is the owner's call. **Doing it first is strictly cheaper than
-   folding it into 7b.**
+6.5. **Done 2026-08-28.** `sheetId` + `formatVersion: 3` — see §4.3. Every path in step 7
+   needed it identically, and doing it standalone kept the migration out of 7b's diff.
+   `scripts/autosave_check.mjs` grew from 20 to 29 checks: sheetId is stable across a
+   reload, a pre-v3 import mints one, a v3 import preserves it, the same v3 file imported
+   twice stays one sheet, and an empty id is treated as absent. Those import checks are
+   also the **first automated coverage of Modify Maze** — the Phase B driver never loads a
+   progress file back in.
 7. *(Future)* Backend-persisted accounts/projects (Phase 3 persistence, §2). Specced
    2026-08-28 as a **multi-user workflow**, not just remote storage:
    [`collaboration_workflow_spec.md`](collaboration_workflow_spec.md) — Teacher /

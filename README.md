@@ -242,10 +242,16 @@ node scripts/autosave_check.mjs                       # expects Vite on :5174
 BASE=http://localhost:5173 node scripts/autosave_check.mjs
 ```
 
-20 checks: the record is written and is a bare `LevelProgress`; a reload keeps the sheet,
+29 checks: the record is written and is a bare `LevelProgress` carrying a `sheetId`; a reload keeps the sheet,
 the level and the dashboard route; an edit made inside the write-coalescing window is still
 flushed on navigation; the Resume/Discard card behaves; the three paths that replace the
 sheet confirm first only once a maze has actually been authored; and a corrupted record is
 quarantined rather than crashing the app or being deleted. One check authors a real maze via
 Randomize, which is why the backend is required — a sheet of empty slots would not prove
 the claim that matters.
+
+It also covers `sheetId` and the save-file migrations: the id is stable across a reload, a
+pre-`formatVersion`-3 file gets one minted on import, a v3 file keeps the id it carries, the
+same v3 file imported twice stays one sheet, and an empty id is treated as absent. Those
+import checks are the **first automated coverage of Modify Maze** — `phase_b_run.mjs` never
+loads a progress file back in.
