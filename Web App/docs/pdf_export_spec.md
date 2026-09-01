@@ -146,6 +146,10 @@ Static content, not derived from maze data except the header fields:
   consumes (`pdf_design_spec.md` §5) — those are specific to teaching the rule here and
   must **not** leak into the real per-question panels (§4.2) or the answer key (§6).
 - **Decorative footer graphic:** purely cosmetic (muted maze/road motif), no data.
+  **CUT 2026-09-01 (owner) — not part of the cover.** See `pdf_design_spec.md` §4. It is
+  absent from `Front Cover.svg` entirely and the composited watermark occupies that area,
+  so there is nothing here for an implementer to build. Kept in this list only so the
+  element inventory still matches what the source sample showed (§0).
 
 **Built 2026-08-21 — `Web App/frontend/src/spike/CoverPage.tsx`.** The cover is now
 composited on the real `Front Cover.svg`, and the note that used to sit here (predicting
