@@ -168,6 +168,14 @@ Left-to-right, single row, ~14mm tall band at the top of the page:
   every functional element. Don't spend renderer-development time perfecting this
   before the maze panels themselves (§6) are correct.
 
+  **CUT 2026-09-01 (owner) — dropped, not deferred. Do not build it.** The description
+  above is kept only as a record of what the sample showed. Three things made this an easy
+  cut: it was already the lowest-priority item in this doc and the only open one with no
+  artwork owed to it; §12.2 records that it is absent from `Front Cover.svg` altogether, so
+  building it would mean *adding* to the designer's file rather than reproducing it; and
+  the composited watermark now occupies that area anyway. All three levels have exported
+  cleanly without it (`PRODUCTION_PROCESS.md` §4).
+
 ---
 
 ## 5. Direction box (cover page only)
@@ -208,7 +216,10 @@ Left-to-right, single row, ~14mm tall band at the top of the page:
   triangular pennant, no square frame — contrast with §6's upright square-frame flag)
   signaling failure. **This entire panel is a static fixture, identical on every
   export regardless of the level's actual content** — not derived from real question
-  data at all. Treat as **optional/lowest priority**, same as §4's decorative motif: a
+  data at all. Treat as **optional/lowest priority** — though note that §4's decorative
+  motif, once this bullet's companion in that category, was **cut** on 2026-09-01 while
+  this panel was **not**: it is built and it stays. The priority note means only "don't
+  block the per-question renderer on it", not "it is a candidate to drop": a
   renderer that omits the incorrect-example panel (or ships a simplified placeholder)
   is still correct on everything that actually varies per sheet. Don't block shipping
   the real per-question rendering (§6/§7, the part that matters for every single
@@ -452,6 +463,8 @@ has a hard ceiling on precision:
   not measured in mm.
 - **Cosmetic decorative motifs** (§4's road graphic, §5's incorrect-example panel) —
   intentionally deprioritized; see those sections for why they're safe to simplify.
+  §4's road graphic was **cut outright** on 2026-09-01, so its unmeasured dimensions will
+  never be needed. §5's counter-example panel is still built and still matters.
 - **`symbol-22.svg`'s exact pose** — confirmed 2026-08-19 to be a *different* full-body
   Hatenyan pose than §9's squinting-eyes description, approved as an interim
   placeholder anyway (§9). Swap it for a pose-accurate vector later if one appears;
@@ -554,8 +567,9 @@ wordmark: a fixed shape, not text in any font.
   all; the Direction box container is empty inside. The counter-example sits in its own
   bordered sub-container with a three-line caption beside it and a large ✗ over the maze.
 - The decorative footer motif (§4's cosmetic road/mountain graphic) — not found in this
-  file either, and still lowest-priority per §4/§11. Note the composited watermark now
-  occupies that area, which may make the motif unnecessary.
+  file either. The composited watermark occupies that area, and the owner **cut the motif**
+  on 2026-09-01 (§4), so this is no longer a gap in the file: it is simply not part of the
+  cover.
 
 **Font caveat found while building this — resolved 2026-08-21.** The file's text asks for
 `Roboto-Bold, Roboto` and names **no generic fallback**, and Roboto was not installed

@@ -304,6 +304,12 @@ ever wanted — that one *is* a list reorder.
   slot looks like in print, and this repo does not guess at design decisions. If
   proofing layout mid-authoring turns out to matter, that is the version to build, and
   this bullet's original intent is the reason to build it.
+
+  **Confirmed 2026-09-01: keep the gate, don't build the placeholder.** The question was
+  put to the owner directly, so this is a closed decision rather than a backlog item. An
+  unauthored slot has no print appearance because nothing in `pdf_design_spec.md` describes
+  one, and inventing it here would be this repo guessing at a design decision it has
+  consistently refused to guess at. Reopen only if a designer supplies the panel.
 - **Answer Key** (added 2026-08-27) — renders the same sheet with solution paths
   overlaid and saves it in one click, as `<sheet filename>-answer-key.pdf`
   (`pdf_export_spec.md` §6). Gated on `allComplete` for the same reason as Preview, but
