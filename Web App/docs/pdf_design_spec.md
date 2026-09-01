@@ -59,7 +59,7 @@ colors used anywhere in the document):
 |---|---|---|---|
 | Ink | `#111111` | 17,17,17 | all text, icons, page-number box border, outer page border |
 | Brand gray | `#9D9F9E` | 157,159,158 | maze outer border, wall lines, lattice dots, title banner fill, "Direction" pill fill |
-| Light gray | `#D1D3D2` | 209,211,210 | decorative background motif only (cover page road/mountain graphic) — cosmetic, see §4 |
+| ~~Light gray~~ | `#D1D3D2` | 209,211,210 | **Retired 2026-09-01.** Its only use was §4's decorative background motif, now cut. Measured from the sample, but the hex appears nowhere in the source or the designer SVGs. Kept as a record of the sample, not as a live colour — which is also what makes §10's "exactly ink black / one brand gray / white" checklist item true rather than aspirational |
 | White | `#FFFFFF` | 255,255,255 | page background, panel interior |
 | Answer-key path | `#111111` measured; **`#58595B` as rendered** | 17,17,17 | solution-path overlay. The sample measures the same ink black as everything else, but the renderer deliberately draws it in a dark grey — owner override, 2026-08-21, see §8 |
 
@@ -216,14 +216,19 @@ Left-to-right, single row, ~14mm tall band at the top of the page:
   triangular pennant, no square frame — contrast with §6's upright square-frame flag)
   signaling failure. **This entire panel is a static fixture, identical on every
   export regardless of the level's actual content** — not derived from real question
-  data at all. Treat as **optional/lowest priority** — though note that §4's decorative
-  motif, once this bullet's companion in that category, was **cut** on 2026-09-01 while
-  this panel was **not**: it is built and it stays. The priority note means only "don't
-  block the per-question renderer on it", not "it is a candidate to drop": a
-  renderer that omits the incorrect-example panel (or ships a simplified placeholder)
-  is still correct on everything that actually varies per sheet. Don't block shipping
-  the real per-question rendering (§6/§7, the part that matters for every single
-  export) on perfecting this one static illustration.
+  data at all.
+
+  **Built, and it stays — status corrected 2026-09-01.** This bullet used to say "treat as
+  optional/lowest priority… a renderer that omits the incorrect-example panel is still
+  correct on everything that actually varies per sheet". That was sound advice *while the
+  per-question renderer was unbuilt*: it meant "don't block §6/§7 on one static
+  illustration", and nothing ever was blocked. That window is closed — the panel is built
+  in `spike/CoverPage.tsx` and the cover is signed off — so the omit clause is removed
+  rather than left standing as licence to drop a shipped element.
+
+  Do not confuse this with §4's decorative motif. The two were companions in the old
+  priority note, and on 2026-09-01 the motif was genuinely **cut** while this panel was
+  not.
 
 ---
 
@@ -461,10 +466,13 @@ has a hard ceiling on precision:
   clean scan (JPEG edges made a precise run-length measurement noisy at that scale).
 - **Corner radii** (direction box, pill, banner-ribbon notches) — visual estimates,
   not measured in mm.
-- **Cosmetic decorative motifs** (§4's road graphic, §5's incorrect-example panel) —
-  intentionally deprioritized; see those sections for why they're safe to simplify.
-  §4's road graphic was **cut outright** on 2026-09-01, so its unmeasured dimensions will
-  never be needed. §5's counter-example panel is still built and still matters.
+- **Cosmetic decorative motifs** (§4's road graphic, §5's incorrect-example panel) — never
+  measured precisely, because both were deprioritized while the per-question renderer was
+  the thing that mattered. **Their status has since diverged**, so this single entry no
+  longer describes both: §4's road graphic was **cut outright** on 2026-09-01 and its
+  dimensions will never be needed, while §5's counter-example panel **was built** — its
+  real geometry now lives in `spike/CoverPage.tsx`'s measured layout comments (the
+  horizontal budget near the top of that file) rather than as an estimate here.
 - **`symbol-22.svg`'s exact pose** — confirmed 2026-08-19 to be a *different* full-body
   Hatenyan pose than §9's squinting-eyes description, approved as an interim
   placeholder anyway (§9). Swap it for a pose-accurate vector later if one appears;
@@ -492,7 +500,7 @@ notes in §4, §6.3, §6.4, §7, §9 for exactly which paragraphs each file repl
 | `symbol-20.svg` | Camera icon. | **No** — a different maze/game type's content. Keep on file for when that type is built; don't reference it from the PickAxe renderer. |
 | `symbol-21.svg` | Trampoline icon with a directional arrow; the arrow can be flipped/rotated to any of the 4 directions. | **No** — different game content, same as above. |
 | `symbol-22.svg` | Full-body Hatenyan mascot — a different pose than §9's raster description, **approved 2026-08-19 as the interim placeholder** for that slot regardless. | Yes — bonus page footer mascot (§9). |
-| `symbol-23.svg` | **Posuru** — a second mascot (a bear). | **No — confirmed 2026-08-19.** Not used anywhere in the PickAxe worksheet; reserved for a different maze type's content. |
+| `symbol-23.svg` | **Posuru** — a second mascot (a bear). | **No — confirmed 2026-08-19, reconfirmed 2026-09-01.** Not used by the PickAxe worksheet in any form. The owner's rule: **this maze type uses Hatenyan and only Hatenyan**, and the owner will say if and when any content uses Posuru. An earlier draft of this table implied Posuru appears in Primary's raster last page; that was an identification made from the JPEG, not from the owner, and it has been removed here and in `pdf_export_spec.md` §5. |
 | `symbol-24.svg` | Directional path tile: entry-left/exit-down, reversible and rotatable to produce every entry/exit combination; dark area = tile, white area = the path. | **No** — different game content. |
 | `symbol-25.svg` | Directional path tile: entry-left/exit-right, same rotate/reverse behavior as `symbol-24.svg`. | **No** — different game content. |
 | `symbol-26.svg` | **Pickaxe** icon (angled handle + wedge head). Fill `#414042`. | Yes — §6.4, and anywhere else in-app that shows a pickaxe count. |

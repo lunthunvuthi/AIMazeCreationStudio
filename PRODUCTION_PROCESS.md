@@ -195,9 +195,10 @@ the other two are still open:
    What the stand-in actually costs is now measured rather than assumed. A full Advanced
    export on 2026-08-28 showed the borrowed page renders correctly full-bleed at A4 and
    carries no Primary-specific wording — it names no level, so nothing on it reads as
-   *wrong* for Advanced. The gap is editorial (Advanced closes on Posuru and two Hatenyan
-   with "Well done! You did it!", inherited rather than chosen for it), not a shipping
-   blocker. Commission the artwork when the level ships for real; nothing is blocked on it
+   *wrong* for Advanced. The gap is editorial (Advanced closes on two Hatenyan flanking a
+   larger bear-like figure with "Well done! You did it!", inherited rather than chosen for
+   it — see `pdf_export_spec.md` §5 on why that figure is described rather than named),
+   not a shipping blocker. Commission the artwork when the level ships for real; nothing is blocked on it
    before then.
 3. **No second maze type has run this process.** The seam table in §3 is derived from
    reading the code, not from having actually shipped a second type through it. Expect it

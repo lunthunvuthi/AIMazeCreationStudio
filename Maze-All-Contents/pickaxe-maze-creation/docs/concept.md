@@ -47,10 +47,22 @@ first line of a world.
 
 Two consequences, which are why the answer is useful rather than merely tidy. A10's
 closing artwork for a future level is **unconstrained** — nothing here obliges it to be a
-mine, so Advanced's owed page can be commissioned on brand grounds alone. And Posuru and
-Hatenyan, who already appear on the Kinder and Primary last pages, stay **brand**
-characters shared with every maze type rather than becoming pickaxe-maze characters. Don't
-introduce lore later without editing this paragraph first.
+mine, so Advanced's owed page can be commissioned on brand grounds alone. And the mascot
+closing the shipped last pages stays a **brand** character shared with every maze type,
+rather than becoming this maze type's own.
+
+**Which mascot, precisely — owner, 2026-08-19 and reconfirmed 2026-09-01: Pickaxe Maze uses
+Hatenyan, and only Hatenyan.** Posuru is a *separate* brand asset (`symbol-23.svg`,
+`pdf_design_spec.md` §12.1) and the owner will say if and when any content uses it, so do
+not attribute it to this maze type. Kinder's last page is Hatenyan alone with a pencil
+under "I did it!"; Primary's — borrowed by Advanced — shows **two Hatenyan flanking a
+third, larger bear-like figure** under "Well done! You did it!".
+
+That third figure is deliberately **left unnamed here.** Earlier drafts of this repo called
+it Posuru, but that identification came from reading the supplied JPEG rather than from the
+owner, and it is exactly the attribution the rule above forbids. If it needs a name in the
+docs, the owner is the one to give it. Don't introduce lore — or a character name — without
+editing this paragraph first.
 
 ## 2. The audience
 

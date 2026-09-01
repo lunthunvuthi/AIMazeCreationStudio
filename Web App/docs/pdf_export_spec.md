@@ -146,6 +146,10 @@ Static content, not derived from maze data except the header fields:
   consumes (`pdf_design_spec.md` §5) — those are specific to teaching the rule here and
   must **not** leak into the real per-question panels (§4.2) or the answer key (§6).
 - **Decorative footer graphic:** purely cosmetic (muted maze/road motif), no data.
+  **CUT 2026-09-01 (owner) — not part of the cover.** See `pdf_design_spec.md` §4. It is
+  absent from `Front Cover.svg` entirely and the composited watermark occupies that area,
+  so there is nothing here for an implementer to build. Kept in this list only so the
+  element inventory still matches what the source sample showed (§0).
 
 **Built 2026-08-21 — `Web App/frontend/src/spike/CoverPage.tsx`.** The cover is now
 composited on the real `Front Cover.svg`, and the note that used to sit here (predicting
@@ -288,9 +292,16 @@ project owner supplied the finished artwork as full-bleed A4 rasters, one per le
 the sheet's level; nothing is composited onto it.
 
 - Both files are 2480×3508px — A4 at exactly 300dpi.
-- They are **not** two crops of one design. Kinder closes on Hatenyan with "I did it!";
-  Primary closes on Posuru plus two Hatenyan with "Well done! You did it!". The per-level
-  split is real content.
+- They are **not** two crops of one design. Kinder closes on **Hatenyan alone**, holding a
+  pencil, under "I did it!"; Primary closes on **two Hatenyan flanking a third, larger
+  bear-like figure**, cropped at the page's bottom edge, under "Well done! You did it!".
+  The per-level split is real content.
+
+  **Do not name that third figure.** This doc used to call it Posuru. That came from
+  reading the JPEG, not from the owner, and it contradicts the owner's standing rule
+  (2026-08-19, reconfirmed 2026-09-01): **Pickaxe Maze uses Hatenyan and only Hatenyan.**
+  Posuru is a separate brand asset the owner will assign to content explicitly. Describing
+  the figure is fine; attributing it is not.
 - Keyed by **level, not maze type** — so a new maze type inherits it, but a new level
   needs new artwork. **`advanced` has no artwork of its own and reuses Primary's**, on the
   project owner's explicit instruction (2026-08-21). That is an editorial choice, not a
