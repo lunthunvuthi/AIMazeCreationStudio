@@ -121,6 +121,13 @@ Static content, not derived from maze data except the header fields:
 
     `scripts/verify_worksheet_pdf.py` asserts the new string, **including the year**, so a
     silent regression to the yearless form fails the run.
+
+    **`Wk` confirmed by the owner 2026-09-01.** It shipped as the measurement's only
+    viable candidate rather than as anyone's preference, so it was carried as an open
+    question in case the owner wanted `Week` back. They don't — `Wk` is the chosen form,
+    not merely the surviving one. Reversing it is a one-word change to `CoverPage.tsx` and
+    the verifier, but it costs the year on this line, which is the whole point of this
+    entry.
 - **Title banner:** full-width bar, **measured as a plain gray fill (`#9D9F9E`), not
   colored** (corrects this doc's original amber/colored-banner guess), with a large
   title (sample: "Let's do it", no exclamation mark) and the Hatenyan mascot icon.

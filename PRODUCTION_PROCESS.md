@@ -183,10 +183,13 @@ the other two are still open:
    stage: it is what the rules are *for*, and it is what tells a designer what the cover
    should teach. It used to exist only as the repo `README.md`'s generic project overview.
    `pickaxe` now has `docs/concept.md` alongside its `rules.md`, and that is the pattern
-   for every future maze type. Note that its §7 leaves three questions open for the owner
-   (target age band per level, whether the cover must state the exactly-zero rule
-   outright, and how much of the mining fiction is canon) — deliberately unanswered rather
-   than guessed.
+   for every future maze type. Its §7 carried three questions for the owner; **all three
+   were answered on 2026-09-01**, so A1 now gates nothing. Ages 4–6 / 6–9 / 9–12 for
+   Kinder / Primary / Advanced; the cover keeps the exactly-zero rule **implied** rather
+   than stating it; and the mining fiction is **minimal** — pickaxe and rock, no named
+   setting or characters. `concept.md` §7 is the index, and §1/§2/§5 hold the answers in
+   place. None of the three changed a rule or a rendered byte, which is what an A1 answer
+   is supposed to look like: the stage records intent, not behaviour.
 2. **Advanced has no last page of its own.** It reuses Primary's artwork, which is a
    deliberate stand-in, not a finished state — a dedicated Advanced page is still owed.
    What the stand-in actually costs is now measured rather than assumed. A full Advanced

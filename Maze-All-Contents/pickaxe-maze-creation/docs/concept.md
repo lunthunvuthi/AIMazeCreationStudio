@@ -17,8 +17,8 @@ Two stages downstream read this doc directly:
   one. `frontend/src/spike/coverTutorial.ts` is that section made concrete.
 
 Where a statement is an inference from an existing artifact rather than an owner
-decision, it says so. §7 lists what A1 *should* pin down but nothing in the repo records
-yet — those are for the owner, not for the next reader to guess at.
+decision, it says so. §7 records the owner's answers to the three questions A1 had left
+open; all three were answered on 2026-09-01, so A1 no longer gates anything.
 
 ---
 
@@ -40,6 +40,18 @@ theme art this maze type owns — the logo, the mascot, and the closing page bel
 brand and are shared with every other maze type
 (`PRODUCTION_PROCESS.md` §3 — last-page artwork is keyed by *level*, not by maze type).
 
+**How much of this is canon — settled 2026-09-01 (owner). Minimal.** The pickaxe and the
+rock walls are the whole of it: this maze type has **no named setting, no characters, and
+no name beyond "Pickaxe Maze"**. Rock is a description of what a pickaxe acts on, not the
+first line of a world.
+
+Two consequences, which are why the answer is useful rather than merely tidy. A10's
+closing artwork for a future level is **unconstrained** — nothing here obliges it to be a
+mine, so Advanced's owed page can be commissioned on brand grounds alone. And Posuru and
+Hatenyan, who already appear on the Kinder and Primary last pages, stay **brand**
+characters shared with every maze type rather than becoming pickaxe-maze characters. Don't
+introduce lore later without editing this paragraph first.
+
 ## 2. The audience
 
 Three levels, from [`difficulty_setting.md`](difficulty_setting.md): **Kinder**,
@@ -48,9 +60,26 @@ and each **opens with a 1-star tutorial question** — so every level is authore
 player has never seen a pickaxe maze before.
 
 What the levels are actually indexed on is *puzzle complexity*, which the docs define
-precisely (grid size, pickaxe count, wall floors — `difficulty_setting.md`). What they are
-**not** indexed on anywhere in the repo is reader age or school grade; the names imply it
-and nothing states it. See §7.
+precisely (grid size, pickaxe count, wall floors — `difficulty_setting.md`).
+
+**Age bands — set 2026-09-01 (owner).** Ages, not school grades:
+
+| Level | Age band |
+|---|---|
+| Kinder | **4–6** |
+| Primary | **6–9** |
+| Advanced | **9–12** |
+
+The bands **overlap deliberately.** They name who a level is *for*, not a partition of
+children, so a 6-year-old sits legitimately in either of the first two and a teacher
+picking by ability is not doing it wrong.
+
+Complexity remains the only thing the generator is parameterised on
+(`difficulty_setting.md`); no code reads the band and none should. It exists because a
+designer or copywriter cannot judge whether a cover reads as too wordy without knowing who
+is reading it, and that was the only question it was ever blocking. The practical bite is
+at the bottom of the range: Kinder's 4-year-olds are the constraint the cover is written
+against, which is the reason §5 keeps the cover to one taught idea.
 
 Two audience facts are load-bearing and *are* settled, because the medium settles them:
 
@@ -129,12 +158,23 @@ revision has to drop something, drop in this order: the no-revisit rule (a penci
 rarely wants to cross itself), then uniqueness (invisible to the player, it just makes
 the puzzle work), never the budget.
 
-The exactly-zero half of §5's win condition is, as of 2026-08-26, **not** spelled out
-anywhere on the cover — it is implied by the correct example spending its single pickaxe.
-That is a known tension between §3's claim that the exactly-zero rule does the most work
-and the cover teaching the softer "you only have so many". Flagged in §7 rather than
-silently fixed, because changing it is a cover redesign and the owner has signed the
-cover off.
+The exactly-zero half of §5's win condition is **not** spelled out anywhere on the cover —
+it is implied by the correct example spending its single pickaxe. That was flagged as a
+real tension between §3's claim that the exactly-zero rule does the most work and the
+cover teaching the softer "you only have so many".
+
+**Settled 2026-09-01 (owner): keep it implied. Do not add cover copy for it.** This is a
+decision, not an oversight, and the next reader should not "fix" it. What it rests on: the
+cover's teaching budget is one idea (above); the header field on that same page is already
+measured tight enough that `pdf_export_spec.md` §3 had to shorten `Week` to `Wk` merely to
+fit a year; and a 4-year-old at the bottom of §2's Kinder band reads the worked example
+long before a sentence.
+
+The rule is taught by the puzzle instead. `difficulty_setting.md` fixes *every* level's
+opening question at 3×3 / 1 pickaxe, so the player meets exactly-zero in a puzzle they
+cannot fail (§4) — a demonstration, not a caption. If this is ever revisited, note the
+cost: new cover copy needs a slot in `Front Cover.svg`, a designer layout pass, and
+re-approval of a cover the owner has already signed off.
 
 ## 6. Non-goals
 
@@ -149,18 +189,24 @@ Recorded so a later reader doesn't "fix" them:
   not a score the player earns. Nothing on the page asks for a time.
 - **Not diagonal, and not wrap-around.** `rules.md` §1/§2.
 
-## 7. Open questions for the owner
+## 7. Owner decisions (formerly open questions)
 
-A1 should state these; no artifact in the repo does, so they are deliberately left blank
-rather than invented here.
+All three of the questions this section used to ask were answered by the owner on
+**2026-09-01**. Each answer is written into the section it belongs to; this table is the
+index, kept in place so that anyone following an older handoff or link lands on the answer
+instead of on the question.
 
-1. **Target age or grade per level.** "Kinder / Primary / Advanced" implies a school
-   banding, but every documented difference between the levels is puzzle complexity. If
-   there is an intended age band, it belongs in §2 — it is what a designer would need to
-   judge whether a cover reads as too wordy.
-2. **Does the cover need to state the exactly-zero rule explicitly?** See §5. Today it is
-   only implied. Answering "no" is a fine answer; it should just be recorded as a choice.
-3. **How much of the mining fiction is canon?** §1 describes walls as rock because the
-   pickaxe implies it, but no artifact says whether this maze type has a setting, a
-   character, or a name beyond "Pickaxe Maze" — which would matter to A10's closing page
-   if a future level gets art of its own.
+| # | Question | Answer | Written up in |
+|---|---|---|---|
+| 1 | Target age or grade per level | **Ages 4–6 / 6–9 / 9–12** for Kinder / Primary / Advanced. Ages, not grades; bands overlap on purpose | §2 |
+| 2 | Must the cover state the exactly-zero rule explicitly? | **No — keep it implied.** A choice, not an omission | §5 |
+| 3 | How much of the mining fiction is canon? | **Minimal** — pickaxe and rock only. No named setting, no characters, no world | §1 |
+
+**A1 is closed and gates nothing further.** `PRODUCTION_PROCESS.md` §5's gap 1 listed
+these three as the last thing outstanding at this stage.
+
+Note that none of the three changed a rule, a generator parameter, or a single rendered
+byte — and that is the expected outcome, not a sign the questions were pointless. A1's job
+is to record *intent*. Two of the three answers were "no change", which is worth writing
+down precisely because the alternative is a later session re-deriving the question from
+scratch and guessing differently.
