@@ -1,3 +1,4 @@
+import { authHeaders } from '../auth/tokenStore'
 import type { LevelProgress } from '../types/maze'
 
 // Hits POST /api/pdf/render (Web App/pdf-service/server.js), proxied to that
@@ -6,7 +7,10 @@ export async function renderPdf(levelProgress: LevelProgress, opts?: { answerKey
   const qs = opts?.answerKey ? '?answerKey=true' : ''
   const res = await fetch(`/api/pdf/render${qs}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    // Step 7a authenticates the render endpoint. It was the most expensive
+    // unauthenticated endpoint in the system: one unauthenticated POST drives a
+    // real headless browser through a full A4 render.
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(levelProgress),
   })
   if (!res.ok) {

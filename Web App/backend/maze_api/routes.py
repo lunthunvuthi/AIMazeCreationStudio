@@ -1,12 +1,13 @@
 """The two endpoints from development_plan.md §8, backed entirely by pickaxe_maze."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from pickaxe_maze.difficulty import STAR_PARAMS
 from pickaxe_maze.generator import GenerationError, generate_maze
 from pickaxe_maze.models import MazeData
 from pickaxe_maze.validator import validate_maze
 
+from .auth import get_current_user
 from .schemas import (
     GenerateRequest,
     GenerateResponse,
@@ -15,7 +16,10 @@ from .schemas import (
     ValidateResponse,
 )
 
-router = APIRouter(prefix="/api/maze")
+# Every maze endpoint requires a signed-in user as of step 7a. Declared once on
+# the router rather than per endpoint, so a new route cannot be added
+# unprotected by forgetting a decorator.
+router = APIRouter(prefix="/api/maze", dependencies=[Depends(get_current_user)])
 
 # The registry from development_plan.md §5 has only one maze type today.
 SUPPORTED_TYPES = {"pickaxe"}

@@ -99,6 +99,13 @@ Serves the two endpoints from [`Web App/docs/development_plan.md`](Web%20App/doc
 - `POST /api/maze/generate` — `{ type, star, sgSeed?, pathSeed?, wallSeed? }` → a generated
   maze + `solutionTrace` + the seeds actually used.
 - `POST /api/maze/validate` — `{ type, maze }` → `{ solutionCount, trace?, diagnostic? }`.
+- `GET /api/users/me`, `GET /api/users` (admin), `PATCH /api/users/{id}/role` (admin).
+- `GET /api/health` — the only unauthenticated route.
+
+Both `/api/maze/*` endpoints require a signed-in user as of roadmap step 7a. Until an Auth0
+tenant is configured the backend runs in **bypass mode** and accepts the fixed token
+`dev-bypass-token`, saying so in its startup log and in `/api/health` — see
+[`Web App/docs/auth_spec.md`](Web%20App/docs/auth_spec.md).
 
 Interactive docs are served at `http://127.0.0.1:8000/docs`. Only `type: "pickaxe"` is
 registered so far, per the maze-type registry in §5.
@@ -132,9 +139,14 @@ React + TypeScript (Vite) + Tailwind CSS + Zustand, in
 `development_plan.md` §9: routing, the maze-type registry (§5), the landing page (§6.1),
 the Level Dashboard with its page rows and drag-and-drop (§6.5,
 `level_dashboard_pagination_spec.md`), the manual creation wizard, the randomize/reroll
-flow, file-based save/load, and PDF export. Still future: `localStorage` autosave (step 6)
-and backend-persisted accounts (step 7) — until then a browser refresh loses an
-in-progress sheet, and **Save Progress** is the only safety net.
+flow, file-based save/load, PDF export, `localStorage` autosave (step 6) and Auth0 sign-in
+(step 7a). Still future: backend-persisted sheets (step 7b) — worksheets live in this
+browser, so signing in as someone else shows you the same sheet.
+
+**Signing in.** Every screen except `/login` and `/spike/pdf-preview` requires a session.
+With no Auth0 configuration the app signs you in as a local development user and shows an
+amber warning strip; copy `.env.example` to `.env.local` and follow
+[`Web App/docs/auth_spec.md`](Web%20App/docs/auth_spec.md) §3 to point it at a real tenant.
 
 Requires Node 20.19+ (or 22.12+). This is a separate `npm` project from the Python side
 above — no virtualenv involved.
@@ -167,6 +179,10 @@ npm install                 # first time only
 npx playwright install chromium   # first time only
 npm start
 ```
+
+`POST /api/pdf/render` needs a bearer token as of step 7a — one anonymous request drives a
+real browser through a full A4 render. The route it renders, `/spike/pdf-preview`, stays
+public on purpose: that headless browser has no session and cannot get one.
 
 It listens on `:8010` and expects the frontend dev server at `http://localhost:5173`. If
 Vite picked a different port — it does when 5173 is already held, printing the one it

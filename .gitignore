@@ -18,3 +18,9 @@ Web App/spikes/pdf-renderer/output/*
 # scripts/phase_b_run.mjs writes exported worksheets here. They are validation
 # runs, not content — a real worksheet is a deliverable, not a build artifact.
 phase-b-out/
+
+# Step 7a. The local users database (SQLite is the DATABASE_URL default) and the
+# Auth0 credentials that point the app at a tenant. Both are per-developer.
+Web App/backend/*.db
+.env
+.env.local

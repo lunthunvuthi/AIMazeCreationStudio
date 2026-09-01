@@ -462,12 +462,22 @@ in §5).
    no novel engineering, and the authoring core (wizard, randomizer, validator, dashboard,
    PDF) is untouched — but it turns a single-user local tool into a deployed service with
    accounts, a database and backups. Sub-steps, in dependency order:
-   - **7a** Google sign-in, `users` + roles, tighten `main.py`'s `allow_origins=["*"]`,
-     authenticate the pdf-service render endpoint. *Decide the test-login story here:*
-     Google blocks automated sign-in, so every browser-driven check in `scripts/` stops
-     working the day auth lands unless the backend offers a test-only path.
+   - **7a Done 2026-09-01.** Google sign-in through Auth0, a `users` table with roles,
+     `main.py`'s `allow_origins=["*"]` tightened to an explicit list, and the pdf-service
+     render endpoint authenticated. Specced in [`auth_spec.md`](auth_spec.md), which also
+     carries the click-by-click Auth0 setup walkthrough. Four owner decisions shaped it:
+     a **hard route guard** (not decorative login), a **users table now** (not Auth0
+     `app_metadata`, not deferred), an **env-gated development bypass** as the test-login
+     answer, and SQLite as the `DATABASE_URL` default with Postgres as the deployment
+     target. The bypass exists because Google and Auth0's hosted login both block
+     automated sign-in, and every frontend guarantee in this repo is verified by driving
+     the real app; it is impossible to reach with `APP_ENV=production`. Two things stay
+     public on purpose: `/api/health`, and `/spike/pdf-preview` — the pdf-service renders
+     by pointing its own headless Chromium at that route, so gating it would break
+     Preview and Download in the real app, not just the harness.
    - **7b** Sheets + immutable revisions in Postgres, `BackendAdapter`, "My work" and
-     "Shared" screens, Alembic (there are no migrations today).
+     "Shared" screens. Alembic and the first migration arrived with 7a, so this step
+     adds tables rather than standing the migration machinery up.
    - **7c** Publish + comments.
    - **7d** Roster + deadlines (soft: badges and sort order, no notifications in v1).
    - **7e** Approval / revoke, audit log, and the approved PDF rendered **server-side from
