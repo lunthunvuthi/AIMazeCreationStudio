@@ -11,8 +11,14 @@
 // Both supplied images ARE that page, rendered by the designer at 2480x3508px —
 // A4 at exactly 300dpi — so there is nothing left for a renderer to approximate.
 // Worth knowing: they are not merely two crops of one design. Kinder ends on
-// Hatenyan with "I did it!"; Primary ends on Posuru plus two Hatenyan with
-// "Well done! You did it!". The per-level split is real content, not branding.
+// Hatenyan alone, holding a pencil, with "I did it!"; Primary ends on two
+// Hatenyan flanking a third, larger bear-like figure with "Well done! You did
+// it!". The per-level split is real content, not branding.
+//
+// Do NOT name that third figure. These comments used to call it Posuru, which
+// came from reading the JPEG rather than from the owner and contradicts the
+// owner's standing rule (2026-08-19, reconfirmed 2026-09-01): this maze type
+// uses Hatenyan and only Hatenyan. See `pdf_export_spec.md` §5.
 
 import { useEffect } from 'react'
 import type { LevelName } from '../types/maze'
@@ -31,9 +37,10 @@ const LAST_PAGE_IMAGES: Partial<Record<LevelName, string>> = {
   // Advanced has no artwork of its own yet. Reusing Primary's is the project
   // owner's explicit instruction (2026-08-21), not a silent guess by this
   // renderer — worth stating, because the two supplied pages differ in content
-  // and not just branding (Kinder closes on Hatenyan with "I did it!", Primary on
-  // Posuru with "Well done! You did it!"), so which one Advanced borrows is a
-  // real editorial choice. Replace with a dedicated file when one arrives.
+  // and not just branding (Kinder closes on Hatenyan alone with "I did it!",
+  // Primary on a three-mascot group with "Well done! You did it!"), so which one
+  // Advanced borrows is a real editorial choice. Replace with a dedicated file
+  // when one arrives.
   advanced: PRIMARY_LAST_PAGE,
 }
 

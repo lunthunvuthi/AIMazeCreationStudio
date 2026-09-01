@@ -292,9 +292,16 @@ project owner supplied the finished artwork as full-bleed A4 rasters, one per le
 the sheet's level; nothing is composited onto it.
 
 - Both files are 2480×3508px — A4 at exactly 300dpi.
-- They are **not** two crops of one design. Kinder closes on Hatenyan with "I did it!";
-  Primary closes on Posuru plus two Hatenyan with "Well done! You did it!". The per-level
-  split is real content.
+- They are **not** two crops of one design. Kinder closes on **Hatenyan alone**, holding a
+  pencil, under "I did it!"; Primary closes on **two Hatenyan flanking a third, larger
+  bear-like figure**, cropped at the page's bottom edge, under "Well done! You did it!".
+  The per-level split is real content.
+
+  **Do not name that third figure.** This doc used to call it Posuru. That came from
+  reading the JPEG, not from the owner, and it contradicts the owner's standing rule
+  (2026-08-19, reconfirmed 2026-09-01): **Pickaxe Maze uses Hatenyan and only Hatenyan.**
+  Posuru is a separate brand asset the owner will assign to content explicitly. Describing
+  the figure is fine; attributing it is not.
 - Keyed by **level, not maze type** — so a new maze type inherits it, but a new level
   needs new artwork. **`advanced` has no artwork of its own and reuses Primary's**, on the
   project owner's explicit instruction (2026-08-21). That is an editorial choice, not a
