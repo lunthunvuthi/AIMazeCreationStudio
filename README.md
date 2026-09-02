@@ -104,7 +104,11 @@ Serves the two endpoints from [`Web App/docs/development_plan.md`](Web%20App/doc
 
 Both `/api/maze/*` endpoints require a signed-in user as of roadmap step 7a. Until an Auth0
 tenant is configured the backend runs in **bypass mode** and accepts the fixed token
-`dev-bypass-token`, saying so in its startup log and in `/api/health` — see
+`dev-bypass-token`, saying so in its startup log and in `/api/health`.
+
+Server-side configuration lives in a single **`.env` at the repository root**, read by both
+the backend and the pdf-service — `cp .env.example .env`. The frontend is configured
+separately in `Web App/frontend/.env.local`. Full walkthrough:
 [`Web App/docs/auth_spec.md`](Web%20App/docs/auth_spec.md).
 
 Interactive docs are served at `http://127.0.0.1:8000/docs`. Only `type: "pickaxe"` is

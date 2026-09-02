@@ -17,6 +17,8 @@
 // and that browser has no session; the route stays public and carries no user
 // data. See auth_spec.md §5.
 
+import './loadEnv.js'
+
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
 // Must stay in step with maze_api/config.py's DEV_BYPASS_TOKEN and the

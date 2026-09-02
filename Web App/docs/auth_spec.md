@@ -128,8 +128,30 @@ To replace them with your own, in the **Google Cloud Console**:
 
 ### 3.5 Point the app at your tenant
 
-Frontend — copy [`Web App/frontend/.env.example`](../frontend/.env.example) to
-`.env.local` (git-ignored) and fill in:
+**Two files.** The frontend is configured separately from the two server-side
+components, because Vite only exposes variables prefixed `VITE_` and only reads files
+inside its own project.
+
+**1 — the servers.** Copy [`.env.example`](../../.env.example) at the **repository root**
+to `.env` and fill in two values:
+
+```bash
+cp .env.example .env
+```
+
+```bash
+AUTH0_DOMAIN=maze-studio.us.auth0.com
+AUTH0_AUDIENCE=https://api.maze-studio
+BOOTSTRAP_ADMIN_EMAIL=you@yourschool.example   # §6
+```
+
+One file, read by **both** the backend and the pdf-service. They need the same two
+values, and a mismatch between them produces a 401 with no useful message — designed out
+rather than documented. A real exported environment variable still beats the file, so a
+deployment that sets them properly ignores whatever is on disk.
+
+**2 — the frontend.** Copy [`Web App/frontend/.env.example`](../frontend/.env.example) to
+`.env.local` in the same folder:
 
 ```bash
 VITE_AUTH0_DOMAIN=maze-studio.us.auth0.com
@@ -137,27 +159,11 @@ VITE_AUTH0_CLIENT_ID=<Client ID from §3.2>
 VITE_AUTH0_AUDIENCE=https://api.maze-studio
 ```
 
-Backend — the same tenant, as environment variables:
+Both files are git-ignored. Nothing else needs configuring — start the three servers the
+way the README already describes.
 
-```bash
-export AUTH0_DOMAIN=maze-studio.us.auth0.com
-export AUTH0_AUDIENCE=https://api.maze-studio
-export BOOTSTRAP_ADMIN_EMAIL=you@yourschool.example   # §6
-python scripts/run_backend.py
-```
-
-pdf-service — the same two again:
-
-```bash
-cd "Web App/pdf-service"
-AUTH0_DOMAIN=maze-studio.us.auth0.com AUTH0_AUDIENCE=https://api.maze-studio \
-FRONTEND_URL=http://localhost:5174 npm start
-```
-
-Restart Vite after editing `.env.local`; Vite reads env files at startup only.
-
-`AUTH0_AUDIENCE` must be **byte-identical** in all three places. A mismatch produces a 401
-with no useful message, and is the second most common setup failure.
+`AUTH0_AUDIENCE` and `VITE_AUTH0_AUDIENCE` must be **byte-identical**. Restart Vite after
+editing `.env.local`; it reads env files at startup only.
 
 ### 3.6 Check it worked
 
@@ -165,12 +171,34 @@ with no useful message, and is the second most common setup failure.
 curl -s http://localhost:8000/api/health
 ```
 
-- `"authBypass": true` → the backend still sees no Auth0 config. Check the exported
-  variables are in the same shell that started it.
-- `"authBypass": false` → real verification is on. Open the app; you should be redirected
-  to Auth0's hosted login, and after signing in `GET /api/users/me` should return you.
+- `"authBypass": true` → the servers still see no Auth0 config. Check `.env` is at the
+  **repository root**, not inside `Web App/backend/`.
+- `"authBypass": false` → real verification is on. The pdf-service says the same thing in
+  its startup line. Open the app; you should be redirected to Auth0's hosted login.
 
----
+### 3.7 When sign-in fails: reading the error
+
+Auth0's failures are specific if you look at the `error_description` in the URL you land
+on. The three that actually happen:
+
+| What you see | What it means | Fix |
+|---|---|---|
+| `Callback URL mismatch` | The address the app redirected from is not in the application's allowed list. | §3.2 step 5 — and press **Save Changes**. |
+| `Service not found: <your audience>` | No API with that identifier exists in this tenant. | §3.3. Check for a typo; the identifier is not editable after creation. |
+| `Client "..." is not authorized to access resource server "..."` | The API exists, but this application has not been granted access to it. | **Dashboard → Applications → APIs → your API → Machine to Machine Applications**, find the application, toggle it **Authorized**. Also confirm **Applications → your app → Settings → Application Type** really is *Single Page Application* — this error is a common symptom of an app created as the wrong type. |
+
+You can test all of this from a terminal without touching the app. A request with no
+`audience` isolates the application and callback URL from the API:
+
+```bash
+D=<your-auth0-domain>; C=<your-client-id>; RU=http://localhost:5174
+curl -s -o /dev/null -w '%{redirect_url}\n' \
+  "https://$D/authorize?response_type=code&client_id=$C&redirect_uri=$RU&scope=openid&state=probe"
+```
+
+A redirect to `https://$D/u/login?...` means the tenant, the client id and the callback
+URL are all correct. Add `&audience=<your-api-identifier>` and run it again to test the
+API separately. Whatever comes back in `error_description` is the row to look up above.
 
 ## 4. The development bypass
 
@@ -279,6 +307,10 @@ python -m alembic revision --autogenerate -m "..."   # after changing models.py
 
 ## 7. Configuration reference
 
+Everything in the "backend, pdf-service" rows goes in the **repository-root `.env`**; the
+`VITE_` rows go in **`Web App/frontend/.env.local`**. Exported shell variables override
+both, which is how a deployment should set them.
+
 | Variable | Component | Default | Meaning |
 |---|---|---|---|
 | `APP_ENV` | backend, pdf-service | `development` | `production` forbids the bypass and requires full config. |
@@ -288,7 +320,7 @@ python -m alembic revision --autogenerate -m "..."   # after changing models.py
 | `DATABASE_URL` | backend | SQLite at `Web App/backend/maze_studio.db` | Point at Postgres for deployment. |
 | `BOOTSTRAP_ADMIN_EMAIL` | backend | — | This address becomes an admin on first sign-in. |
 | `CORS_ORIGINS` | backend | the Vite dev origins | Comma-separated. **Required** in production. |
-| `VITE_AUTH0_DOMAIN` / `VITE_AUTH0_CLIENT_ID` / `VITE_AUTH0_AUDIENCE` | frontend | — | §3.5. Read at Vite startup — restart after editing. |
+| `VITE_AUTH0_DOMAIN` / `VITE_AUTH0_CLIENT_ID` / `VITE_AUTH0_AUDIENCE` | frontend | — | §3.5. Read at Vite startup — restart after editing. `VITE_AUTH0_AUDIENCE` must equal `AUTH0_AUDIENCE`. |
 | `VITE_AUTH_BYPASS` | frontend | off | Force the bypass on. Ignored in a production build. |
 | `AUTH_TOKEN` | `scripts/phase_b_run.mjs` | `dev-bypass-token` | Send a real access token instead. |
 
@@ -311,8 +343,9 @@ explicitly, because a real login cannot be automated:
 # frontend, for a harness run
 cd "Web App/frontend" && VITE_AUTH_BYPASS=1 npm run dev
 
-# backend, for a harness run
+# backend and pdf-service, for a harness run
 DEV_AUTH_BYPASS=1 python scripts/run_backend.py
+cd "Web App/pdf-service" && DEV_AUTH_BYPASS=1 npm start
 
 node scripts/autosave_check.mjs                # 29 checks
 node scripts/phase_b_run.mjs --level primary --route mixed --clean
@@ -320,6 +353,10 @@ node scripts/phase_b_run.mjs --level primary --route mixed --clean
 
 Forget the frontend flag and every `page.goto` lands on `/login`; forget the backend flag
 and `phase_b_run.mjs` fails its first `generate` with an explicit 401 message saying so.
+
+Alternatively set `DEV_AUTH_BYPASS=1` once in the root `.env` while you are working on the
+harness — it is ignored the moment `APP_ENV=production`, so it cannot follow you into a
+deployment. Just remember it is on: `/api/health` will say `"authBypass": true`.
 
 ---
 

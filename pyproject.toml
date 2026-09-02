@@ -12,6 +12,7 @@ dependencies = [
     "pyjwt[crypto]",
     "sqlalchemy",
     "alembic",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]

@@ -21,6 +21,9 @@ phase-b-out/
 
 # Step 7a. The local users database (SQLite is the DATABASE_URL default) and the
 # Auth0 credentials that point the app at a tenant. Both are per-developer.
+# `.env` at the repo root configures the backend and the pdf-service;
+# Web App/frontend/.env.local configures the frontend. The .env.example
+# templates beside them are tracked.
 Web App/backend/*.db
 .env
 .env.local

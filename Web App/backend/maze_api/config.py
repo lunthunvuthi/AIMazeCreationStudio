@@ -12,6 +12,13 @@ single frozen `settings` object. Two rules shape the whole module:
   Auth0 settings is a startup error, not a downgrade, and the bypass cannot be
   switched on at all. A misconfiguration that fails to boot is recoverable; one
   that boots wide open is not.
+
+Values come from a `.env` file at the **repository root**, which the pdf-service
+reads too. One file rather than one per component, because the two share
+AUTH0_DOMAIN and AUTH0_AUDIENCE and a mismatch between them produces a 401 with
+no useful message -- a trap worth designing out rather than documenting. Real
+environment variables always win over the file, so a deployment that sets them
+properly is unaffected by a stray `.env` on disk.
 """
 
 from __future__ import annotations
@@ -20,7 +27,13 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BACKEND_DIR.parent.parent
+
+# override=False: an exported variable beats the file. Absent file, no-op.
+load_dotenv(REPO_ROOT / ".env", override=False)
 
 # Origins the Vite dev server actually uses. :5174 is in the list because a
 # stale Vite from an older session routinely holds :5173 (see the handoffs).
