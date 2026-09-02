@@ -98,6 +98,11 @@ A "tenant" is just your own isolated Auth0 account. One is enough.
    URL that is ever visited — nothing has to exist at that address. Once set it cannot be
    changed.
 3. Signing algorithm: **RS256** (the default). Leave it.
+4. Open the new API's **Settings** tab and find **Application Access Policy**. If
+   *User-Delegated Access* says **Per-app authorization**, go to the **Application Access**
+   tab, press **Edit** beside `Maze Studio Web`, and grant it — see §3.7's third row for
+   the exact clicks. Skip this and sign-in fails with an error naming the resource server,
+   which is not obviously about this setting.
 
 Without an API, Auth0 hands the frontend an opaque token the backend cannot verify. This
 step is what makes the token a real JWT.
@@ -185,7 +190,7 @@ on. The three that actually happen:
 |---|---|---|
 | `Callback URL mismatch` | The address the app redirected from is not in the application's allowed list. | §3.2 step 5 — and press **Save Changes**. |
 | `Service not found: <your audience>` | No API with that identifier exists in this tenant. | §3.3. Check for a typo; the identifier is not editable after creation. |
-| `Client "..." is not authorized to access resource server "..."` | The API exists, but Auth0 is enforcing a client grant for this application — which it does **not** do for a first-party Single Page Application. | Check **Applications → your app → Settings → Application Type** is *Single Page Application*; fix it and save if not. If it already is, create a fresh application per §3.2 and swap the new Client ID into `.env.local`. **Do not go looking for the API's *Machine to Machine Applications* tab** — that tab is for machine-to-machine clients and will not list a SPA. |
+| `Client "..." is not authorized to access resource server "..."` | The API exists, but its **API Access Policy** for *User-Delegated Access* is set to **Per-app authorization**, so only applications with an explicit grant can get a token — being a first-party SPA is not enough. | **Applications → APIs → your API → Application Access** tab → **Edit** beside your application → under *User-Delegated Access* choose **Grant Access** → **Always grant all permissions**. (This API defines no permissions, so that grants nothing beyond the right to request a token.) The alternative is **Settings → Application Access Policy** → *User-Delegated Access* → **All apps allowed**; granting the single app is least-privilege and what Auth0 recommends. |
 
 You can test all of this from a terminal without touching the app. A request with no
 `audience` isolates the application and callback URL from the API:
