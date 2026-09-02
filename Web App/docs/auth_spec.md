@@ -185,7 +185,7 @@ on. The three that actually happen:
 |---|---|---|
 | `Callback URL mismatch` | The address the app redirected from is not in the application's allowed list. | §3.2 step 5 — and press **Save Changes**. |
 | `Service not found: <your audience>` | No API with that identifier exists in this tenant. | §3.3. Check for a typo; the identifier is not editable after creation. |
-| `Client "..." is not authorized to access resource server "..."` | The API exists, but this application has not been granted access to it. | **Dashboard → Applications → APIs → your API → Machine to Machine Applications**, find the application, toggle it **Authorized**. Also confirm **Applications → your app → Settings → Application Type** really is *Single Page Application* — this error is a common symptom of an app created as the wrong type. |
+| `Client "..." is not authorized to access resource server "..."` | The API exists, but Auth0 is enforcing a client grant for this application — which it does **not** do for a first-party Single Page Application. | Check **Applications → your app → Settings → Application Type** is *Single Page Application*; fix it and save if not. If it already is, create a fresh application per §3.2 and swap the new Client ID into `.env.local`. **Do not go looking for the API's *Machine to Machine Applications* tab** — that tab is for machine-to-machine clients and will not list a SPA. |
 
 You can test all of this from a terminal without touching the app. A request with no
 `audience` isolates the application and callback URL from the API:
