@@ -203,12 +203,30 @@ function parseTrace(trace, width) {
   })
 }
 
+// Roadmap step 7a put /api/maze/* behind a login. This script talks to the
+// backend directly, outside the browser, so it needs its own token. Google and
+// Auth0's hosted login both block automated sign-in, so what it sends is the
+// backend's fixed development token (maze_api/config.py DEV_BYPASS_TOKEN),
+// which is accepted only while that server is running unauthenticated. Set
+// AUTH_TOKEN to send a real one instead.
+//
+// The BROWSER half of this run needs the matching switch on the frontend: once
+// Auth0 is configured in Web App/frontend/.env.local, start Vite with
+// VITE_AUTH_BYPASS=1 or the route guard will bounce this script to /login.
+const AUTH_TOKEN = process.env.AUTH_TOKEN ?? 'dev-bypass-token'
+
 async function generate(star) {
   const res = await fetch(`${opts.backend}/api/maze/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${AUTH_TOKEN}` },
     body: JSON.stringify({ type: 'pickaxe', star }),
   })
+  if (res.status === 401) {
+    throw new Error(
+      `generate star=${star} -> 401. The backend requires a real login. Either run it without ` +
+        'Auth0 configured / with DEV_AUTH_BYPASS=1, or pass AUTH_TOKEN=<access token>.',
+    )
+  }
   if (!res.ok) throw new Error(`generate star=${star} -> ${res.status} ${await res.text()}`)
   return res.json()
 }

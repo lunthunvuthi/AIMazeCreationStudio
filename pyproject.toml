@@ -3,7 +3,17 @@ name = "maze-studio"
 version = "0.1.0"
 description = "Maze/quiz generation and validation, starting with the PickAxe Maze type"
 requires-python = ">=3.9"
-dependencies = ["fastapi", "uvicorn", "pydantic"]
+# pyjwt[crypto]/sqlalchemy/alembic arrived with roadmap step 7a (Auth0 login and
+# the users table) -- see Web App/docs/auth_spec.md.
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "pyjwt[crypto]",
+    "sqlalchemy",
+    "alembic",
+    "python-dotenv",
+]
 
 [project.optional-dependencies]
 dev = ["pytest", "httpx"]

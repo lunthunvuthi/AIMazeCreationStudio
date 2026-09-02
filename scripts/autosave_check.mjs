@@ -14,6 +14,12 @@
  *   node scripts/autosave_check.mjs                       # expects Vite on :5174
  *   BASE=http://localhost:5173 node scripts/autosave_check.mjs
  *
+ * Roadmap step 7a put the whole app behind a login. This script drives the real
+ * UI, and Google and Auth0's hosted login both block automated sign-in, so it
+ * depends on the frontend's development bypass. That bypass is ON by default
+ * while Auth0 is unconfigured; once Web App/frontend/.env.local has a tenant in
+ * it, start Vite with VITE_AUTH_BYPASS=1 or every goto below lands on /login.
+ *
  * Needs the backend on :8000 too — one check authors a real maze via Randomize,
  * because "an authored maze survives" is the claim that actually matters and a
  * sheet of empty slots would not prove it.
