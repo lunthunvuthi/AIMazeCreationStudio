@@ -51,6 +51,12 @@ Two consequences of #2 that were not obvious when it was taken, and are now buil
 
 ## 3. Setting up Auth0, step by step
 
+> **Status, 2026-10-16: deferred by the owner.** The app runs in bypass mode (§4) with the
+> Auth0 values blank, and nothing here needs doing until login is wanted. The tenant
+> created on 2026-09-02 still exists; its last open item is the API Access Policy grant in
+> §3.3 step 4 — the `not authorized to access resource server` row of §3.7. Fill the values
+> back in (§3.5) and restart all three servers to switch login on.
+
 You need three things: a **tenant**, an **application**, and an **API**. Then a **Google
 connection** so the sign-in button does something.
 
