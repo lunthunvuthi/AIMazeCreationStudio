@@ -1,4 +1,8 @@
+// First import, before anything reads process.env — see loadEnv.js.
+import './loadEnv.js'
+
 import express from 'express'
+import { describeAuth, requireAuth } from './auth.js'
 import { isFrontendReachable, launchBrowser, renderPdf, validateLevelProgressShape } from './render.js'
 
 const PORT = Number(process.env.PORT) || 8010
@@ -12,7 +16,7 @@ const browser = await launchBrowser()
 // Registered at the full /api/pdf/render path (not just /render/pdf) because
 // vite.config.ts's proxy forwards the original path unchanged, the same
 // convention the existing FastAPI backend's /api/maze/* routes already use.
-app.post('/api/pdf/render', async (req, res) => {
+app.post('/api/pdf/render', requireAuth(), async (req, res) => {
   try {
     validateLevelProgressShape(req.body)
   } catch (err) {
@@ -40,6 +44,7 @@ app.post('/api/pdf/render', async (req, res) => {
 
 const server = app.listen(PORT, () => {
   console.log(`pdf-service listening on :${PORT} (frontend expected at ${FRONTEND_URL})`)
+  console.log(describeAuth())
 })
 
 async function shutdown() {

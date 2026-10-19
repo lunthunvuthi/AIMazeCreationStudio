@@ -1,8 +1,13 @@
 from fastapi.testclient import TestClient
 
+from maze_api.config import DEV_BYPASS_TOKEN
 from maze_api.main import app
 
-client = TestClient(app)
+# Every /api/maze route requires a signed-in user as of step 7a. The suite runs
+# with DEV_AUTH_BYPASS=1 (conftest.py), so one fixed bearer token stands in for
+# a real Auth0 login -- these tests are about maze generation, and the login
+# rules themselves are covered in test_auth.py.
+client = TestClient(app, headers={"Authorization": f"Bearer {DEV_BYPASS_TOKEN}"})
 
 
 def test_generate_returns_a_maze_with_camelcase_seeds():

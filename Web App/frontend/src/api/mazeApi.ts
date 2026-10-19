@@ -1,11 +1,16 @@
+import { authHeaders } from '../auth/tokenStore'
 import type { MazeData, ValidateResponse } from '../types/maze'
+
+// Both endpoints require a signed-in user as of roadmap step 7a — the backend
+// router carries the dependency, so an unauthenticated call gets a 401 rather
+// than a maze.
 
 // Hits POST /api/maze/validate (Web App/backend/maze_api/routes.py), proxied
 // to the backend by vite.config.ts in dev.
 export async function validateMaze(payload: { type: string; maze: MazeData }): Promise<ValidateResponse> {
   const res = await fetch('/api/maze/validate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
@@ -45,7 +50,7 @@ export interface GenerateParams {
 export async function generateMaze(payload: GenerateParams): Promise<GenerateResult> {
   const res = await fetch('/api/maze/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(payload),
   })
   if (!res.ok) {
